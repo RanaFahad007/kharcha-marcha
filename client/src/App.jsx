@@ -1,6 +1,6 @@
 import { Component } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, CheckCircle2, LayoutDashboard, Plus, RefreshCw, Settings, UserPlus, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, LayoutDashboard, Plus, RefreshCw, UserPlus, X } from 'lucide-react'
 import { useApp } from './context/AppContext'
 import Navbar from './components/Navbar'
 import OnboardingCards from './components/OnboardingCards'
@@ -100,22 +100,27 @@ function HomeRoute() {
 
 /**
  * Mobile bottom navigation (visible only below the md breakpoint).
- * Dashboard / Add / Invite / Admin. Add and Invite open the dashboard
+ * Dashboard / Add / Invite only — the Admin Panel is intentionally NOT
+ * shown on mobile (admin tasks are desktop-only); admins use the Admin
+ * Panel link in the top bar on desktop. Add and Invite open the dashboard
  * modals via window events that GroupDashboard listens for
  * ('splittrack:open-expense' / 'splittrack:open-invite'); if the user is
  * on another page we navigate to the group first, then fire the event.
  * Safe-area padding keeps it clear of the home indicator.
  */
 function MobileBottomNav() {
-  const { activeGroup, t } = useApp()
+  const { activeGroup, t, pushToast } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
-  const isAdminRoute = location.pathname.endsWith('/admin')
-  const isDashboardRoute = !isAdminRoute && (location.pathname === '/' || location.pathname.startsWith('/groups/'))
+  const isDashboardRoute = location.pathname === '/' || location.pathname.startsWith('/groups/')
 
   function openOnDashboard(eventName) {
     if (!activeGroup) {
+      // No group yet — there is nothing to invite into. Send the user to
+      // the empty state (Create Group) and say so, instead of silently
+      // doing nothing.
       navigate('/')
+      pushToast('error', t('noGroupsDesc'))
       return
     }
     const path = `/groups/${activeGroup._id}`
@@ -148,14 +153,6 @@ function MobileBottomNav() {
         <button onClick={() => openOnDashboard('splittrack:open-invite')} className={itemClass(false)} aria-label={t('invite')}>
           <UserPlus className="w-5 h-5" />
           <span className="truncate max-w-full px-1">{t('invite')}</span>
-        </button>
-        <button
-          onClick={() => (activeGroup ? navigate(`/groups/${activeGroup._id}/admin`) : navigate('/'))}
-          className={itemClass(isAdminRoute)}
-          aria-current={isAdminRoute ? 'page' : undefined}
-        >
-          <Settings className="w-5 h-5" />
-          <span className="truncate max-w-full px-1">{t('adminPanel')}</span>
         </button>
       </div>
     </nav>

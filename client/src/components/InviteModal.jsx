@@ -3,7 +3,7 @@ import { Check, Copy, MessageCircle, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useApp, api } from '../context/AppContext'
 
-export default function InviteModal({ group, onClose }) {
+export default function InviteModal({ group, onClose, isAdmin = false }) {
   const { t, pushToast, fetchMyGroups } = useApp()
   const [invitesEnabled, setInvitesEnabled] = useState(group?.invitesEnabled !== false)
   const [autoApproveJoin, setAutoApproveJoin] = useState(group?.autoApproveJoin === true)
@@ -80,6 +80,7 @@ export default function InviteModal({ group, onClose }) {
           </a>
         </div>
 
+        {isAdmin && (
         <div className="space-y-3 border-t border-slate-100 pt-4">
           <label className="flex items-center justify-between gap-3 cursor-pointer">
             <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{t('invitesEnabled')}</span>
@@ -108,6 +109,7 @@ export default function InviteModal({ group, onClose }) {
             />
           </label>
         </div>
+        )}
 
         <button onClick={onClose} className="w-full mt-5 py-2.5 min-h-[44px] rounded-lg border border-slate-200 dark:border-slate-600 dark:text-slate-100 font-medium hover:bg-slate-50 dark:hover:bg-slate-800">
           {t('close')}

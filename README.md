@@ -299,47 +299,83 @@ in-memory smoke test above proves the API itself works end to end.
 Change the password after the showcase (sign in as superadmin; the seed
 only creates the account when no superadmin exists).
 
-## Deploy to Vercel
+## Deploy to Vercel (full app — frontend + backend on one domain)
 
-Vercel is connected. The project is deploy-ready with
-[`vercel.json`](sandbox://workspace/splittrack/vercel.json) at the project
-root (frontend static site: build `client/`, output `client/dist`, SPA
-fallback rewrite). **The backend is a separate Node service** — it is not
-a Vercel serverless function; deploy it on Render/Railway/a VPS, or run
-it locally, and point the frontend at it.
+The app is adapted for Vercel serverless: `server/server.js` exports the
+Express app and only calls `app.listen` when run directly, and
+`api/index.js` is the Vercel serverless entry point (lazy cached MongoDB
+connection + superadmin seed on first API request — see "Vercel adapter"
+below). [`vercel.json`](sandbox://workspace/splittrack/vercel.json) builds
+the client, serves `client/dist`, and rewrites `/api/(.*)` to the API
+function, so the deployed frontend talks to the deployed backend on the
+**same domain** — no separate backend host needed.
 
-### 1. Frontend (Vercel)
-
-```bash
-vercel --prod
-# or: import the repo in the Vercel dashboard, root directory = splittrack/
-```
-
-Environment variable to set in the Vercel project (Production):
+### Env vars to set in the Vercel project (Production + Preview)
 
 | Variable | Value |
 |---|---|
-| `VITE_API_URL` | Your deployed backend URL, e.g. `https://splittrack-api.onrender.com` (no trailing slash). Leave unset for local dev — Vite proxies `/api` to `http://localhost:5000`. |
-
-### 2. Backend (separate service, e.g. Render)
-
-Set these env vars on the backend host (same values as `server/.env`):
-
-| Variable | Value |
-|---|---|
-| `PORT` | `5000` (or the host's assigned port) |
 | `MONGODB_URI` | Full Atlas URI from Atlas (Cluster → Connect → Drivers) |
 | `MONGO_URI` | Same as `MONGODB_URI` |
-| `JWT_SECRET` | A long random string (`openssl rand -hex 32`) |
+| `JWT_SECRET` | A long random string (`openssl rand -hex 32`) — generate a fresh one, do not reuse the local dev secret |
 | `JWT_EXPIRES_IN` | `7d` |
-| `FRONTEND_URL` | Your Vercel frontend URL, e.g. `https://splittrack.vercel.app` (CORS allow-list) |
+| `FRONTEND_URL` | The deployed Vercel URL, e.g. `https://kharcha-marcha.vercel.app` (CORS allow-list) |
+| `VITE_API_URL` | `<deployed URL>/api`, e.g. `https://kharcha-marcha.vercel.app/api` — must be set **before** the production build so the frontend bundle points at the live API |
 
-Then `npm install && npm start` in `server/`. The server seeds the
-superadmin on first start (only if none exists).
+### Deploy
 
-> Never put the Atlas URI or `JWT_SECRET` in `vercel.json`, the repo, or
-> chat. `server/.env` is gitignored and is the only file holding the real
-> Atlas URI.
+```bash
+# from the repo root (after the Vercel project "kharcha-marcha" exists):
+vercel --prod
+# or: import RanaFahad007/kharcha-marcha in the Vercel dashboard (GitHub
+# integration) — every push to main then auto-deploys.
+```
+
+### Current status (Nov 14, 2026, ~19:15 PKT) — DEPLOY BLOCKED, code ready
+
+- Repo: **https://github.com/RanaFahad007/kharcha-marcha** (`main`, up to date,
+  includes the Vercel adapter below).
+- **No live Vercel URL yet.** Project creation fails with Vercel API
+  `403 forbidden` on scope `fahads-projects-0a698196` (team
+  `team_rgpSAdhUrWJ3j7Dgd5z74Ly4`): *"Not authorized: Trying to access
+  resource under scope. You must re-authenticate to this scope."* The
+  Vercel OAuth connection in this environment only has identity scopes
+  (openid/email/profile); a token refresh does not add the team scope,
+  and the `authorize_team_access` tool the API error asks for does not
+  exist in this environment's Vercel MCP server.
+- **Exact unblock step:** the user must grant this Vercel connection
+  access to the team **"Fahad's Projects"** (`fahads-projects-0a698196`)
+  through Vercel consent — re-run the Vercel connect flow and select that
+  team when Vercel asks which teams the app may access (completing SSO
+  alone does not add a missing team grant). Then retry: create project
+  `kharcha-marcha` → set the env vars above → deploy → verify.
+- The live app to verify after deploy: sign up a new user, Load Demo
+  Data, check the dashboard, and log in as superadmin (below). The
+  superadmin is seeded automatically on the first API request.
+
+### Vercel adapter (what changed for serverless)
+
+- `server/server.js`: `connectDb()` (cached promise, `readyState === 1`
+  short-circuit) + `ensureDb` middleware on `/api` (connects lazily,
+  seeds the superadmin once, returns 503 if the DB is unreachable
+  instead of `process.exit`). `start()` (local `npm start`) still
+  connects eagerly and listens on `:5000` — local dev is unchanged.
+- `api/index.js`: exports the Express app as the Vercel function handler
+  and restores the original `/api/...` path if Vercel delivers the
+  rewritten `/api/index.js` destination path.
+- `package.json` (root): serverless API dependencies
+  (express/mongoose/bcryptjs/cors/dotenv/jsonwebtoken) so Vercel installs
+  them for the function.
+- `vercel.json`: `installCommand` installs root + client deps,
+  `buildCommand` builds the client, `outputDirectory: client/dist`,
+  `functions.api/index.js.maxDuration: 30`, rewrites `/api/(.*)` →
+  `/api/index.js` and SPA fallback → `/index.html`.
+- Verification of the adapter (Nov 14, 2026): `node --check` on
+  `server.js` + `api/index.js`; `npm run build` in `client/` succeeds
+  (~8s); end-to-end smoke test against a real local `mongod` (the
+  `mongodb-memory-server` binary fasserts in this VM, so a manually
+  started mongod was used instead): **9/9 PASS** — health, signup,
+  bad-login 401, superadmin login seeded via `ensureDb`, superadmin
+  stats, demo load, list groups, balances, export.
 
 ## Verification (v2, re-checked by the coordinator)
 

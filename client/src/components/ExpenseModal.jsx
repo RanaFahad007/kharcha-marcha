@@ -230,11 +230,11 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
   const showReasonBox = showReason || needsReason || editRequestRequired
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 modal-backdrop bg-black/50 overflow-y-auto" onClick={onClose}>
-      <div className="modal-panel bg-white dark:bg-slate-900 rounded-2xl shadow-pop w-full max-w-lg p-6 my-4" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 modal-backdrop bg-black/50 overflow-y-auto" onClick={onClose}>
+      <div className="modal-panel bg-white dark:bg-slate-900 rounded-t-2xl sm:rounded-2xl shadow-pop w-full max-w-lg p-5 sm:p-6 max-h-[92dvh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">{isEdit ? t('editExpense') : t('addExpense')}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+          <button onClick={onClose} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 shrink-0">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -246,24 +246,24 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
         <form onSubmit={submit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('title')}</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('enterTitle')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('enterTitle')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('amount')}</label>
-              <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t('enterAmount')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t('enterAmount')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('date')}</label>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('category')}</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
                 {categoryKeys.map((c) => (
                   <option key={c} value={c}>
                     {t(c)}
@@ -273,7 +273,7 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('paidBy')}</label>
-              <select value={paidBy} onChange={(e) => setPaidBy(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <select value={paidBy} onChange={(e) => setPaidBy(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500">
                 <option value="">{t('selectPayer')}</option>
                 {memberList.map((m) => (
                   <option key={memberId(m)} value={memberId(m)}>
@@ -286,13 +286,13 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('receiptNote')}</label>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('receiptNotePlaceholder')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t('receiptNotePlaceholder')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('receiptUrl')}</label>
-            <input type="url" value={receiptUrl} onChange={(e) => setReceiptUrl(e.target.value)} placeholder={t('receiptUrlPlaceholder')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <input type="url" value={receiptUrl} onChange={(e) => setReceiptUrl(e.target.value)} placeholder={t('receiptUrlPlaceholder')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
             {receiptUrl.trim() && (
-              <a href={receiptUrl.trim()} target="_blank" rel="noreferrer" className="text-xs text-indigo-600 hover:underline">
+              <a href={receiptUrl.trim()} target="_blank" rel="noreferrer" className="text-xs text-brand-700 hover:underline break-all">
                 {receiptUrl.trim()}
               </a>
             )}
@@ -300,13 +300,13 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{t('splitMethod')}</label>
-            <div className="grid grid-cols-4 gap-2 mb-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
               {SPLIT_MODES.map((mode) => (
                 <button
                   key={mode.id}
                   type="button"
                   onClick={() => setSplitMethod(mode.id)}
-                  className={`py-2 rounded-lg text-xs sm:text-sm font-medium border ${splitMethod === mode.id ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
+                  className={`py-2 min-h-[44px] rounded-lg text-xs sm:text-sm font-medium border ${splitMethod === mode.id ? 'bg-brand-600 text-white border-brand-600' : 'border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'}`}
                 >
                   {t(mode.labelKey)}
                 </button>
@@ -320,7 +320,7 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
                 const displayShare = splitMethod === 'EQUAL' ? (checked ? equalShare : 0) : computed?.shareAmount || 0
                 return (
                   <div key={id} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                    <input type="checkbox" checked={checked} onChange={() => toggleMember(id)} className="w-4 h-4 accent-indigo-600" />
+                    <input type="checkbox" checked={checked} onChange={() => toggleMember(id)} className="w-5 h-5 shrink-0 accent-brand-600" />
                     <span className="flex-1 text-sm font-medium truncate text-slate-800 dark:text-slate-100">{memberName(m)}</span>
                     {splitMethod === 'EQUAL' ? (
                       <span className="text-sm text-slate-600 dark:text-slate-300">{checked ? displayShare.toFixed(2) : '0.00'}</span>
@@ -333,10 +333,10 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
                           disabled={!checked}
                           value={inputs[id] || ''}
                           onChange={(e) => setInputs((prev) => ({ ...prev, [id]: e.target.value }))}
-                          className="w-24 px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm text-right disabled:bg-slate-50 dark:disabled:bg-slate-800"
+                          className="w-28 max-w-full px-2 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm text-right disabled:bg-slate-50 dark:disabled:bg-slate-800"
                           placeholder={splitMethod === 'PERCENTAGE' ? '%' : splitMethod === 'SHARES' ? '1' : '0.00'}
                         />
-                        <span className="text-xs text-slate-500 w-14 text-right">{displayShare.toFixed(2)}</span>
+                        <span className="text-xs text-slate-500 w-14 shrink-0 text-right">{displayShare.toFixed(2)}</span>
                       </span>
                     )}
                   </div>
@@ -369,16 +369,16 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
           {showReasonBox && (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('secondEditReason')}</label>
-              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder={t('editReasonPrompt')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} placeholder={t('editReasonPrompt')} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
               {editRequestRequired && <p className="text-xs text-amber-700 dark:text-amber-300 mt-1">{t('editRequestRequired')}</p>}
             </div>
           )}
 
           <div className="flex gap-2 pt-1">
-            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 font-medium hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100">
               {t('cancel')}
             </button>
-            <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold hover:bg-indigo-700 disabled:opacity-60 flex items-center justify-center gap-2">
+            <button type="submit" disabled={saving} className="flex-1 py-2.5 min-h-[44px] rounded-lg bg-brand-600 text-white font-semibold hover:bg-brand-700 disabled:opacity-60 flex items-center justify-center gap-2">
               {saving && <Loader2 className="w-4 h-4 spinner" />}
               {needsReason || editRequestRequired ? t('requestEdit') : t('save')}
             </button>

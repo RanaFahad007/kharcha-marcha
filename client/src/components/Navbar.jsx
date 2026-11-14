@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, Globe, LogOut, Moon, Plus, Shield, Sparkles, Sun, Trash2, Users, Wallet } from 'lucide-react'
+import { Bell, ChevronDown, Globe, LogOut, Moon, Shield, Sparkles, Sun, Trash2, Users, Wallet } from 'lucide-react'
 import { useApp, api } from '../context/AppContext'
 import { languages } from '../i18n/locales'
 import SuperAdminModal from '../pages/SuperAdminModal'
@@ -87,25 +87,25 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 h-16 flex items-center gap-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 min-h-16 flex flex-wrap items-center gap-2 sm:gap-3 py-2">
         <Link to="/" className="flex items-center gap-2 shrink-0">
-          <span className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center">
+          <span className="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center">
             <Wallet className="w-5 h-5" />
           </span>
-          <span className="font-bold text-lg text-slate-900 dark:text-white">{t('appName')}</span>
+          <span className="font-bold text-base sm:text-lg text-slate-900 dark:text-white truncate max-w-[110px] sm:max-w-none">{t('appName')}</span>
         </Link>
 
         <div className="relative" ref={groupRef}>
           <button
             onClick={() => setGroupOpen((v) => !v)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-sm font-medium max-w-[220px]"
+            className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 dark:text-slate-100 text-sm font-medium max-w-[150px] sm:max-w-[220px]"
           >
-            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: activeGroup?.color || '#4F46E5' }} />
+            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: activeGroup?.color || '#0D9488' }} />
             <span className="truncate">{activeGroup?.name || t('dashboard')}</span>
             <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
           </button>
           {groupOpen && (
-            <div className="absolute left-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-pop overflow-hidden">
+            <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-pop overflow-hidden z-50">
               <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('members')}</div>
               {myGroups.length === 0 && <div className="px-4 py-3 text-sm text-slate-500">{t('noGroups')}</div>}
               {myGroups.map((g) => (
@@ -116,18 +116,18 @@ export default function Navbar() {
                     setGroupOpen(false)
                     navigate(`/groups/${g._id}`)
                   }}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-indigo-50"
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-brand-50 dark:hover:bg-slate-800 dark:text-slate-100"
                 >
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: g.color || '#4F46E5' }} />
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: g.color || '#0D9488' }} />
                   <span className="truncate flex-1">{g.name}</span>
-                  {activeGroup?._id === g._id && <span className="text-indigo-600 text-xs font-semibold">●</span>}
+                  {activeGroup?._id === g._id && <span className="text-brand-700 text-xs font-semibold">●</span>}
                 </button>
               ))}
               <div className="border-t border-slate-100 p-2 flex gap-2">
-                <Link to="/" onClick={() => setGroupOpen(false)} className="flex-1 text-center text-sm px-3 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">
+                <Link to="/" onClick={() => setGroupOpen(false)} className="flex-1 text-center text-sm px-3 py-2 rounded-lg bg-brand-600 text-white hover:bg-brand-700">
                   {t('createGroup')}
                 </Link>
-                <Link to="/" onClick={() => setGroupOpen(false)} className="flex-1 text-center text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50">
+                <Link to="/" onClick={() => setGroupOpen(false)} className="flex-1 text-center text-sm px-3 py-2 min-h-[44px] flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800">
                   {t('joinGroup')}
                 </Link>
               </div>
@@ -141,12 +141,12 @@ export default function Navbar() {
             via locales.js and persists the choice in localStorage
             ('splittrack_lang'). Not inside any menu or drawer. */}
         <div
-          className="flex items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50/60 p-1 shrink-0"
+          className="flex items-center gap-1 rounded-xl border border-brand-200 bg-brand-50/60 p-1 shrink-0"
           role="group"
           aria-label="Choose language"
           title="Choose language / زبان منتخب کریں / اختر اللغة"
         >
-          <Globe className="w-4 h-4 text-indigo-600 shrink-0 ml-1" />
+          <Globe className="w-4 h-4 text-brand-700 shrink-0 ml-1" />
           {languages.map((l) => (
             <button
               key={l.code}
@@ -155,8 +155,8 @@ export default function Navbar() {
               title={l.label}
               className={`px-2.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
                 l.code === language
-                  ? 'bg-indigo-600 text-white shadow'
-                  : 'text-slate-600 hover:bg-white hover:text-indigo-700'
+                  ? 'bg-brand-600 text-white shadow'
+                  : 'text-slate-600 hover:bg-white hover:text-brand-700'
               }`}
             >
               <span className="hidden sm:inline">{l.label}</span>
@@ -169,7 +169,7 @@ export default function Navbar() {
 
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+          className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0"
           title={theme === 'dark' ? t('lightMode') : t('darkMode')}
           aria-label={t('toggleTheme')}
         >
@@ -206,7 +206,7 @@ export default function Navbar() {
         {activeGroup && (
           <button
             onClick={() => navigate(`/groups/${activeGroup._id}/admin`)}
-            className="relative p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
+            className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0"
             title={t('notifications')}
           >
             <Bell className="w-5 h-5" />
@@ -221,7 +221,7 @@ export default function Navbar() {
         {activeGroup && (
           <Link
             to={`/groups/${activeGroup._id}/admin`}
-            className="hidden sm:flex items-center gap-1.5 text-sm px-3 py-2 rounded-lg border border-slate-200 hover:bg-slate-50"
+            className="hidden sm:flex items-center gap-1.5 text-sm px-3 py-2 min-h-[44px] rounded-lg border border-slate-200 dark:border-slate-700 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             <Users className="w-4 h-4" />
             {t('adminPanel')}
@@ -229,35 +229,19 @@ export default function Navbar() {
         )}
 
         <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200">
-          <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold">
+          <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">
             {(user?.name || 'U').charAt(0).toUpperCase()}
           </span>
           <span className="text-sm font-medium max-w-[120px] truncate">{user?.name}</span>
-          <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600" title={t('logout')}>
+          <button onClick={handleLogout} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 shrink-0" title={t('logout')}>
             <LogOut className="w-4 h-4" />
           </button>
         </div>
-        <button onClick={handleLogout} className="lg:hidden p-2 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600" title={t('logout')}>
+        <button onClick={handleLogout} className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 shrink-0" title={t('logout')}>
           <LogOut className="w-5 h-5" />
         </button>
       </div>
 
-      <nav className="md:hidden border-t border-slate-100 flex justify-around py-1 text-xs">
-        <Link to="/" className="flex flex-col items-center gap-0.5 py-1 px-3 text-indigo-600 font-medium">
-          <Wallet className="w-5 h-5" />
-          {t('dashboard')}
-        </Link>
-        <Link to="/" className="flex flex-col items-center gap-0.5 py-1 px-3 text-slate-500">
-          <Plus className="w-5 h-5" />
-          {t('createGroup')}
-        </Link>
-        {activeGroup && (
-          <Link to={`/groups/${activeGroup._id}/admin`} className="flex flex-col items-center gap-0.5 py-1 px-3 text-slate-500">
-            <Users className="w-5 h-5" />
-            {t('adminPanel')}
-          </Link>
-        )}
-      </nav>
       {showSuperAdmin && <SuperAdminModal open={showSuperAdmin} onClose={() => setShowSuperAdmin(false)} />}
     </header>
   )

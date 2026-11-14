@@ -56,9 +56,9 @@ export default function ActivityFeedDrawer({ groupId, open, onClose }) {
       <div className="absolute inset-0 bg-black/50 modal-backdrop" onClick={onClose} />
       <div className="drawer-slide-in relative w-full max-w-md h-full bg-white dark:bg-slate-900 shadow-pop overflow-y-auto">
         <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-5 py-4 flex items-center gap-2 z-10">
-          <Activity className="w-5 h-5 text-indigo-600" />
+          <Activity className="w-5 h-5 text-brand-700" />
           <h3 className="font-bold text-slate-900 dark:text-white flex-1">{t('activityFeed')}</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500" aria-label={t('close')}>
+          <button onClick={onClose} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 shrink-0" aria-label={t('close')}>
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -86,10 +86,10 @@ export default function ActivityFeedDrawer({ groupId, open, onClose }) {
               return (
                 <div key={log._id || i} className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-800">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">{actionLabel(action, t)}</span>
-                    <span className="text-xs text-slate-400 whitespace-nowrap">{time}</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700">{actionLabel(action, t)}</span>
+                    <span className="text-xs text-slate-400 whitespace-nowrap shrink-0">{time}</span>
                   </div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white mt-2">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white mt-2 break-words">
                     {actor}
                     {details ? ` — ${details}` : ''}
                   </p>

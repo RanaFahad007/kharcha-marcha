@@ -193,3 +193,181 @@ network limitation, not a code problem, and it does **not** prove the Atlas
 password or cluster name wrong. On a normal network (or the showcase laptop),
 paste the full Atlas URI into `server/.env` and start the server; the
 in-memory smoke test above proves the API itself works end to end.
+
+---
+
+# v2 — What's new (Nov 14, 2026)
+
+## Mobile-first + professional palette (top priority)
+
+- **Mobile-first:** no horizontal overflow on any page (`overflow-x: clip`,
+  `min-w-0`, truncate, `flex-wrap` everywhere); wide tables become stacked
+  cards below the `md` breakpoint (SuperAdmin groups table is
+  `hidden md:block` with a card list on phones); **fixed bottom nav on
+  mobile** (Dashboard / Add / Invite / Admin, raised teal center button,
+  safe-area padding, content `pb-20` on mobile); **all buttons/inputs
+  min 44px** touch targets (also stops iOS input zoom — inputs are 16px);
+  modals are bottom sheets on phones (`max-h-[92dvh]`, rounded top) and
+  centered dialogs on desktop; forms single-column on mobile; QR code
+  scales to screen width.
+- **Palette:** deep navy/slate base (`#0a1f33` / `#102a43`) with **teal
+  (#0D9488) / emerald** accents, clean white cards, subtle `slate-200`
+  borders. Indigo is only a secondary accent. **No bright purple
+  gradients** anywhere (verified: 0 purple/violet/fuchsia gradient classes
+  in `src/` and in the built CSS/JS).
+- Language switcher and dark-mode toggle stay visible in the top bar,
+  next to the Group Switcher, on every screen size.
+
+## Backend v2
+
+- **NEW `models/ActivityLog.js`** — immutable audit trail (`groupId`,
+  `actorId`, `action`, `details`, `createdAt`); every group action is
+  logged (`EXPENSE_ADDED`, `EXPENSE_EDITED`, `EDIT_REQUESTED`,
+  `SETTLEMENT_RECORDED`, `MEMBER_JOINED`, `GROUP_CREATED`).
+  Read via `GET /api/groups/:groupId/activity` (latest 100, newest first).
+- **User:** `avatarColor` (default `'#6366F1'`). **Group:** `currency`
+  enum `PKR/USD/EUR/AED/SAR/INR` (default `PKR`), `monthlyBudget`
+  (default `0` = no limit).
+- **Expense:** categories + `Rent`, `Entertainment`, `Settlement`;
+  `splitMethod` enum `EQUAL/EXACT/PERCENTAGE/SHARES` (default `EQUAL`),
+  `notes`, `receiptUrl`, `splitBetween[].shareMeta`, `editHistory[]`
+  (`editedBy`, `editedAt`, `previousAmount`, `previousTitle`).
+- **4-mode split engine** (`utils/splitEngine.js`): EQUAL penny-rounds so
+  shares sum exactly to the amount; EXACT requires the sum to equal the
+  amount; PERCENTAGE requires `shareMeta` to sum to 100; SHARES splits
+  proportionally. Mismatches return 400 on create and update.
+- **Edit-once + audit:** first member edit pushes `editHistory`,
+  `editCount = 1`, `canEditAgain = false`, and an ActivityLog entry;
+  second edit is blocked with 403 `EDIT_REQUEST_REQUIRED` until an admin
+  approves. Admin edits are free and don't touch member counters.
+- **Debt simplifier** now returns both `memberBalances`
+  (`{user, totalPaid, totalShare, netBalance}`) and `simplifiedDebts`
+  (`{fromUser, toUser, amount}`).
+- **Export** adds `?search` (title/notes) and `$facet` returning
+  `{groupName, currency, exportedAt, role, totalsByCategory, expenses,
+  simplifiedDebts}`.
+- **Demo v2:** group **"🎓 Uni Friends Hostel & Northern Trip (Demo)"**,
+  `monthlyBudget: 50000`, currency PKR; demo users **Ali Khan, Sara Ahmed,
+  Bilal Raza, Zara Tariq** (ACCEPTED), **Hamza Malik** PENDING join request;
+  **15 expenses over the last 25 days using all 4 split methods + 1
+  settlement**; pending 2nd-edit request — Bilal, Chai Dhaba 1200 → 1500,
+  *"Forgot to add paratha bill"*; **6 ActivityLog entries**. Load is
+  idempotent; clear deletes only demo data + demo logs.
+- **Migration** (`scripts/migrateLegacyData.js`): transactional when the
+  DB supports it (falls back with a warning on standalone servers),
+  idempotent, backfills `avatarColor`, `currency`, `monthlyBudget`,
+  `splitMethod`, `notes`, `receiptUrl`, `editHistory`, `shareMeta`.
+  Dry run by default; `--confirm` to apply.
+- **SuperAdmin:** startup seed + `scripts/seedSuperAdmin.js` (idempotent,
+  only if no superadmin exists). Routes (all `requireSuperAdmin`):
+  `GET /api/admin/stats`, `GET /api/admin/groups`,
+  `POST /api/admin/users/:userId/block|unblock` (cannot block self or
+  another superadmin).
+
+## Frontend v2
+
+- **Dark/Light mode** in `AppContext` (persisted `splittrack_theme`,
+  toggle in Navbar, `dark` class on `<html>`).
+- **InviteModal:** instant **QR code** for the join URL (`qrcode.react`,
+  `QRCodeSVG`) + copy link + WhatsApp share.
+- **ExpenseModal:** 4 split modes with per-member inputs and live
+  validation, receipt note/URL fields, 2nd-edit reason prompt on
+  403 `EDIT_REQUEST_REQUIRED`.
+- **WhoOwesWhomCard:** per-debt **"Remind on WhatsApp"** button
+  (`wa.me` with the exact polite reminder message).
+- **NEW `AnalyticsSection.jsx`:** category breakdown bars (pure
+  Tailwind/SVG), top-spenders leaderboard, monthly budget progress.
+- **NEW `ActivityFeedDrawer.jsx`:** slide-in audit-log drawer with
+  before/after expense edits.
+- **GroupDashboard:** KPI cards, **Budget Alert Banner** (Emerald <75%,
+  Amber 75–99%, pulsing Red ≥100% of `monthlyBudget`, hidden when 0),
+  search filter, expense badges — **"Edited (1/1)"** with tooltip
+  (previous amount/title) and **"Pending Admin Approval"**.
+- **AdminPanel:** 2nd-edit requests show a **Before/After diff**; Group &
+  Budget Settings now include currency + monthlyBudget.
+- **NEW `pages/SuperAdminModal.jsx`:** platform stats, all-groups table,
+  block/unblock users (Navbar button, only for superadmins).
+- **i18n: 263 keys in each of en, ur, ar — zero missing.**
+
+## SuperAdmin credentials (for the showcase)
+
+| | |
+|---|---|
+| Email | `superadmin@splittrack.app` |
+| Password | `SuperAdmin123!` |
+
+Change the password after the showcase (sign in as superadmin; the seed
+only creates the account when no superadmin exists).
+
+## Deploy to Vercel
+
+Vercel is connected. The project is deploy-ready with
+[`vercel.json`](sandbox://workspace/splittrack/vercel.json) at the project
+root (frontend static site: build `client/`, output `client/dist`, SPA
+fallback rewrite). **The backend is a separate Node service** — it is not
+a Vercel serverless function; deploy it on Render/Railway/a VPS, or run
+it locally, and point the frontend at it.
+
+### 1. Frontend (Vercel)
+
+```bash
+vercel --prod
+# or: import the repo in the Vercel dashboard, root directory = splittrack/
+```
+
+Environment variable to set in the Vercel project (Production):
+
+| Variable | Value |
+|---|---|
+| `VITE_API_URL` | Your deployed backend URL, e.g. `https://splittrack-api.onrender.com` (no trailing slash). Leave unset for local dev — Vite proxies `/api` to `http://localhost:5000`. |
+
+### 2. Backend (separate service, e.g. Render)
+
+Set these env vars on the backend host (same values as `server/.env`):
+
+| Variable | Value |
+|---|---|
+| `PORT` | `5000` (or the host's assigned port) |
+| `MONGODB_URI` | Full Atlas URI from Atlas (Cluster → Connect → Drivers) |
+| `MONGO_URI` | Same as `MONGODB_URI` |
+| `JWT_SECRET` | A long random string (`openssl rand -hex 32`) |
+| `JWT_EXPIRES_IN` | `7d` |
+| `FRONTEND_URL` | Your Vercel frontend URL, e.g. `https://splittrack.vercel.app` (CORS allow-list) |
+
+Then `npm install && npm start` in `server/`. The server seeds the
+superadmin on first start (only if none exists).
+
+> Never put the Atlas URI or `JWT_SECRET` in `vercel.json`, the repo, or
+> chat. `server/.env` is gitignored and is the only file holding the real
+> Atlas URI.
+
+## Verification (v2, re-checked by the coordinator)
+
+- `node --check` — all 19 server JS files pass; zero `TODO`/mock/stub in
+  shipped code (only third-party `node_modules` contain such comments).
+- Backend smoke test (in-memory MongoDB, real Express app): **40/40 PASS**
+  — superadmin login, group create (USD/1000 budget), join approve,
+  EQUAL/EXACT/PERCENTAGE/SHARES incl. 400s on bad sums and exact
+  999-split sums, legacy `splitType` compat, balances shape, settlement,
+  full edit-once cycle (1st edit → 403 → request → approve → 2nd edit,
+  `editCount: 2`), admin free edit, activity-log contents, export
+  `?search` + member-only debts, demo load (16 expense docs: 15 + 1
+  settlement, idempotent reload), demo pending edit request + Hamza Malik
+  + 6 activity entries, admin stats/groups, block/unblock (blocked login
+  403, cannot block self), demo clear (16 expenses + 6 logs deleted).
+- Migration test: dry run counts correctly, `--confirm` migrates and
+  backfills, second `--confirm` reports all zeros (idempotent).
+- Frontend: `npm run build` — **succeeded, 2012 modules, ~9.3s** (only the
+  pre-existing >500 kB jspdf chunk warning).
+- Mobile check: viewport meta
+  `width=device-width, initial-scale=1.0, viewport-fit=cover` present;
+  **0 purple/violet/fuchsia gradient classes** in built CSS/JS; brand
+  teal `#0d9488` + navy `#0a1f33` present in built CSS; `overflow-x:
+  clip`, 44px touch rule, bottom nav present in built output.
+  *Caveat: no headless 375px overflow measurement was possible in this
+  environment (no Chromium/Playwright available) — worth one real-phone
+  check before the showcase.*
+- Atlas note (unchanged from v1): this VM's DNS refuses external SRV
+  lookups, so the Atlas connection cannot be proven from here; it does
+  not prove the URI/password wrong. Use the showcase machine / Vercel +
+  Render for the live connection.

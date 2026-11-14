@@ -88,6 +88,21 @@ export default function GroupDashboard() {
     loadAll()
   }, [loadAll])
 
+  // Mobile bottom nav (App.jsx) opens these modals via window events.
+  useEffect(() => {
+    const openExpense = () => {
+      setEditingExpense(null)
+      setShowExpenseModal(true)
+    }
+    const openInvite = () => setShowInviteModal(true)
+    window.addEventListener('splittrack:open-expense', openExpense)
+    window.addEventListener('splittrack:open-invite', openInvite)
+    return () => {
+      window.removeEventListener('splittrack:open-expense', openExpense)
+      window.removeEventListener('splittrack:open-invite', openInvite)
+    }
+  }, [])
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     if (!q) return expenses
@@ -174,7 +189,7 @@ export default function GroupDashboard() {
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 text-slate-500">
-        <Loader2 className="w-8 h-8 spinner text-indigo-600" />
+        <Loader2 className="w-8 h-8 spinner text-brand-700" />
         <p>{t('loading')}</p>
       </div>
     )
@@ -184,7 +199,7 @@ export default function GroupDashboard() {
     return (
       <div className="max-w-3xl mx-auto px-4 py-16 text-center">
         <p className="text-red-600 font-medium">{loadError}</p>
-        <button onClick={loadAll} className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700">
+        <button onClick={loadAll} className="mt-4 inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700">
           <RefreshCw className="w-4 h-4" />
           {t('retry')}
         </button>
@@ -193,27 +208,27 @@ export default function GroupDashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 min-w-0">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="w-4 h-10 rounded-full shrink-0" style={{ backgroundColor: group?.color || '#4F46E5' }} />
+          <span className="w-4 h-10 rounded-full shrink-0" style={{ backgroundColor: group?.color || '#0D9488' }} />
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-slate-900 truncate">{group?.name}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white truncate">{group?.name}</h1>
             <p className="text-sm text-slate-500">
               {members.length} {t('membersCount')} · {expenses.length} {t('expenses')}
             </p>
           </div>
         </div>
         <div className="flex-1" />
-        <button onClick={() => setShowActivity(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
+        <button onClick={() => setShowActivity(true)} className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 dark:border-slate-600 dark:text-slate-100">
           <Activity className="w-4 h-4" />
           {t('activityFeed')}
         </button>
-        <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">
+        <button onClick={() => setShowInviteModal(true)} className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800">
           <UserPlus className="w-4 h-4" />
           {t('invite')}
         </button>
-        <Link to={`/groups/${resolvedGroupId}/admin`} className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-sm font-medium hover:bg-slate-50">
+        <Link to={`/groups/${resolvedGroupId}/admin`} className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800">
           <Settings className="w-4 h-4" />
           {t('adminPanel')}
         </Link>
@@ -222,7 +237,7 @@ export default function GroupDashboard() {
             setEditingExpense(null)
             setShowExpenseModal(true)
           }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+          className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700"
         >
           <Plus className="w-4 h-4" />
           {t('addExpense')}
@@ -232,19 +247,19 @@ export default function GroupDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
           <div className="text-sm text-slate-500">{t('totalSpent')}</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{currency} {totalSpent.toFixed(2)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1 break-words">{currency} {totalSpent.toFixed(2)}</div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
           <div className="text-sm text-slate-500">{t('yourShare')}</div>
-          <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">{currency} {yourShare.toFixed(2)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1 break-words">{currency} {yourShare.toFixed(2)}</div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
           <div className="text-sm text-slate-500">{t('youOwe')}</div>
-          <div className="text-2xl font-bold text-red-600 mt-1">{currency} {youOwe.toFixed(2)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-red-600 mt-1 break-words">{currency} {youOwe.toFixed(2)}</div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
           <div className="text-sm text-slate-500">{t('youAreOwed')}</div>
-          <div className="text-2xl font-bold text-emerald-600 mt-1">{currency} {youAreOwed.toFixed(2)}</div>
+          <div className="text-xl sm:text-2xl font-bold text-emerald-600 mt-1 break-words">{currency} {youAreOwed.toFixed(2)}</div>
         </div>
       </div>
 
@@ -278,13 +293,13 @@ export default function GroupDashboard() {
 
       <div className="grid lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-4 min-w-0">
             <div className="flex flex-wrap gap-2 items-center">
               <div className="relative flex-1 min-w-[180px]">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('searchExpenses')} className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('searchExpenses')} className="w-full pl-9 pr-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
               </div>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 max-w-full">
                 <option value="">{t('all')} — {t('category')}</option>
                 {categoryKeys.map((c) => (
                   <option key={c} value={c}>
@@ -292,18 +307,18 @@ export default function GroupDashboard() {
                   </option>
                 ))}
               </select>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-300 text-sm" />
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 rounded-lg border border-slate-300 text-sm" />
-              <button onClick={clearFilters} className="px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50">
+              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm max-w-full" />
+              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm max-w-full" />
+              <button onClick={clearFilters} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">
                 {t('clearFilters')}
               </button>
-              <button onClick={loadAll} className="p-2 rounded-lg border border-slate-300 hover:bg-slate-50" title={t('refresh')}>
+              <button onClick={loadAll} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800" title={t('refresh')}>
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
             <div className="flex gap-2 mt-3">
               <div className="relative">
-                <button onClick={() => setExportOpen((v) => !v)} disabled={exporting} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
+                <button onClick={() => setExportOpen((v) => !v)} disabled={exporting} className="flex items-center gap-1.5 px-3 py-2 min-h-[44px] rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 disabled:opacity-60">
                   <Download className="w-4 h-4" />
                   {t('exportMenu')}
                   <ChevronDown className="w-4 h-4" />
@@ -327,7 +342,7 @@ export default function GroupDashboard() {
           </div>
 
           {filtered.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-card p-10 text-center">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-6 sm:p-10 text-center">
               <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-3" />
               <p className="font-semibold text-slate-900">{t('noExpenses')}</p>
               <p className="text-sm text-slate-500 mt-1">{t('noExpensesDesc')}</p>
@@ -336,15 +351,15 @@ export default function GroupDashboard() {
                   setEditingExpense(null)
                   setShowExpenseModal(true)
                 }}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white text-sm font-semibold hover:bg-brand-700"
               >
                 <Plus className="w-4 h-4" />
                 {t('addYourFirstExpense')}
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-card overflow-hidden">
-              <div className="hidden md:grid grid-cols-[1fr_110px_110px_110px_90px] gap-2 px-5 py-3 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden min-w-0">
+              <div className="hidden md:grid grid-cols-[1fr_110px_110px_110px_90px] gap-2 px-5 py-3 bg-slate-50 dark:bg-slate-800 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 <span>{t('title')}</span>
                 <span>{t('category')}</span>
                 <span>{t('paidBy')}</span>
@@ -352,7 +367,7 @@ export default function GroupDashboard() {
                 <span className="text-right">{t('date')}</span>
               </div>
               {filtered.map((exp) => (
-                <div key={exp._id} className="flex flex-col md:grid md:grid-cols-[1fr_110px_110px_110px_90px] gap-2 px-5 py-3.5 border-t border-slate-100 items-start md:items-center">
+                <div key={exp._id} className="flex flex-col md:grid md:grid-cols-[1fr_110px_110px_110px_90px] gap-2 px-4 sm:px-5 py-3.5 border-t border-slate-100 dark:border-slate-700 items-start md:items-center min-w-0">
                   <div className="min-w-0">
                     <div className="font-semibold text-slate-900 dark:text-white truncate">
                       {exp.title}{' '}
@@ -383,12 +398,12 @@ export default function GroupDashboard() {
                         setEditingExpense(exp)
                         setShowExpenseModal(true)
                       }}
-                      className="p-2 rounded-lg hover:bg-indigo-50 text-indigo-600"
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-brand-50 dark:hover:bg-slate-700 text-brand-700"
                       title={t('editExpense')}
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDelete(exp)} disabled={!isAdmin} className="p-2 rounded-lg hover:bg-red-50 text-red-600 disabled:opacity-40 disabled:cursor-not-allowed" title={isAdmin ? t('delete') : t('onlyAdminCanDelete')}>
+                    <button onClick={() => handleDelete(exp)} disabled={!isAdmin} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-50 dark:hover:bg-slate-700 text-red-600 disabled:opacity-40 disabled:cursor-not-allowed" title={isAdmin ? t('delete') : t('onlyAdminCanDelete')}>
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -400,8 +415,8 @@ export default function GroupDashboard() {
 
         <div className="space-y-4">
           <WhoOwesWhomCard group={group} balances={balances} settlements={settlements} onSettled={loadAll} currency={currency} />
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
-            <h3 className="font-bold text-slate-900 mb-3">{t('members')}</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-4 sm:p-5 min-w-0">
+            <h3 className="font-bold text-slate-900 dark:text-white mb-3">{t('members')}</h3>
             <div className="space-y-2">
               {members.map((m) => {
                 const uid = idOf(m.user || m)
@@ -409,9 +424,9 @@ export default function GroupDashboard() {
                 const role = m.role || 'member'
                 return (
                   <div key={uid || nm} className="flex items-center gap-2 text-sm">
-                    <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">{nm.charAt(0).toUpperCase()}</span>
-                    <span className="flex-1 truncate font-medium">{nm}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${role === 'admin' || role === 'owner' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                    <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs">{nm.charAt(0).toUpperCase()}</span>
+                    <span className="flex-1 truncate font-medium text-slate-900 dark:text-white min-w-0">{nm}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${role === 'admin' || role === 'owner' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
                       {t(role === 'owner' ? 'admin' : role)}
                     </span>
                   </div>

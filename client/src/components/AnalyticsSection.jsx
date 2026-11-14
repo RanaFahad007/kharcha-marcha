@@ -6,9 +6,9 @@ import { categoryKeys } from '../i18n/locales'
 const CATEGORY_COLORS = {
   food: '#f59e0b',
   transport: '#3b82f6',
-  rent: '#8b5cf6',
+  rent: '#1e3a5f',
   utilities: '#06b6d4',
-  entertainment: '#ec4899',
+  entertainment: '#4f46e5',
   shopping: '#10b981',
   other: '#64748b'
 }
@@ -90,16 +90,16 @@ export default function AnalyticsSection({ expenses = [], members = [], group = 
   const { pct, level } = budgetStatus(monthTotal, budget)
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
+    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-4 sm:p-5 min-w-0">
       <div className="flex items-center gap-2 mb-4">
-        <BarChart3 className="w-5 h-5 text-indigo-600" />
+        <BarChart3 className="w-5 h-5 text-brand-700" />
         <h3 className="font-bold text-slate-900 dark:text-white">{t('analytics')}</h3>
       </div>
 
       {/* Monthly budget progress */}
       <div className="mb-5">
-        <div className="flex items-center justify-between text-sm mb-1.5">
-          <span className="font-medium text-slate-700 dark:text-slate-200">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm mb-1.5">
+          <span className="font-medium text-slate-700 dark:text-slate-200 min-w-0 break-words">
             {t('monthlyBudget')} — {t('spentThisMonth')}: {cur} {monthTotal.toFixed(2)}
             {budget > 0 ? ` / ${cur} ${budget.toFixed(2)}` : ''}
           </span>
@@ -146,21 +146,21 @@ export default function AnalyticsSection({ expenses = [], members = [], group = 
         {/* Member spending leaderboard */}
         <div>
           <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-1.5">
-            <TrendingUp className="w-4 h-4 text-indigo-600" />
+            <TrendingUp className="w-4 h-4 text-brand-700" />
             {t('topSpenders')}
           </h4>
           {leaderboard.length === 0 && <p className="text-sm text-slate-500">{t('noMembers')}</p>}
           <div className="space-y-2.5">
             {leaderboard.map((row, i) => (
-              <div key={row.id} className="flex items-center gap-2">
+              <div key={row.id} className="flex items-center gap-2 min-w-0">
                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-slate-200 text-slate-700' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-500'}`}>
                   {i + 1}
                 </span>
                 <span className="flex-1 text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{row.name}</span>
-                <div className="w-24 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden hidden sm:block">
+                <div className="w-16 sm:w-24 h-2 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden hidden sm:block shrink-0">
                   <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${maxPaid > 0 ? (row.total / maxPaid) * 100 : 0}%` }} />
                 </div>
-                <span className="text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                <span className="text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap shrink-0">
                   {cur} {row.total.toFixed(2)}
                 </span>
               </div>

@@ -186,18 +186,17 @@ export default function Navbar() {
           </Link>
         )}
 
-        <div className="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-200">
-          <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">
-            {(user?.name || 'U').charAt(0).toUpperCase()}
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold shrink-0" title={user?.name || user?.email}>
+            {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
           </span>
-          <span className="text-sm font-medium max-w-[120px] truncate">{user?.name}</span>
+          <span className="text-sm font-medium max-w-[90px] sm:max-w-[120px] truncate" title={user?.name || user?.email}>
+            {user?.name || user?.email?.split('@')[0] || ''}
+          </span>
           <button onClick={handleLogout} className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 shrink-0" title={t('logout')}>
             <LogOut className="w-4 h-4" />
           </button>
         </div>
-        <button onClick={handleLogout} className="lg:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 shrink-0" title={t('logout')}>
-          <LogOut className="w-5 h-5" />
-        </button>
       </div>
 
       {showSuperAdmin && <SuperAdminModal open={showSuperAdmin} onClose={() => setShowSuperAdmin(false)} />}

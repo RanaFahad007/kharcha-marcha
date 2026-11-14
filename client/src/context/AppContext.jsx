@@ -93,7 +93,12 @@ export function AppProvider({ children }) {
     setGroupsLoading(true)
     try {
       const res = await api.get('/groups')
-      const list = res.data?.data || []
+      // Backend returns { success, data: { groups: [...] } } — accept both
+      // the wrapped shape and a bare array, and always store an array.
+      // Storing the raw object here used to break every myGroups.length /
+      // .map call downstream (blank page, missing Create Group button).
+      const raw = res.data?.data
+      const list = Array.isArray(raw) ? raw : (Array.isArray(raw?.groups) ? raw.groups : [])
       setMyGroups(list)
       const current = activeGroupRef.current
       if (!current && list.length > 0) {

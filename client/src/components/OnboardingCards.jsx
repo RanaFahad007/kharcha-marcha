@@ -23,7 +23,8 @@ export default function OnboardingCards() {
     setCreating(true)
     try {
       const res = await api.post('/groups', { name: groupName.trim(), color: groupColor })
-      const group = res.data?.data || res.data
+      // createGroup returns { data: { group } }.
+      const group = res.data?.data?.group || res.data?.data || res.data
       pushToast('success', t('groupCreated'))
       const list = await fetchMyGroups()
       const created = list.find((g) => g._id === group?._id) || group

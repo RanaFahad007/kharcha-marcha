@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, Globe, LogOut, Moon, Shield, Sparkles, Sun, Trash2, Users, Wallet } from 'lucide-react'
+import { Bell, ChevronDown, Globe, LogOut, Moon, Shield, Sun, Users, Wallet } from 'lucide-react'
 import { useApp, api } from '../context/AppContext'
 import { languages } from '../i18n/locales'
 import SuperAdminModal from '../pages/SuperAdminModal'
@@ -10,7 +10,6 @@ export default function Navbar() {
   const navigate = useNavigate()
   const [groupOpen, setGroupOpen] = useState(false)
   const [notifCount, setNotifCount] = useState(0)
-  const [demoBusy, setDemoBusy] = useState(false)
   const [showSuperAdmin, setShowSuperAdmin] = useState(false)
   const groupRef = useRef(null)
 
@@ -35,10 +34,14 @@ export default function Navbar() {
           api.get(`/groups/${activeGroup._id}/edit-requests`)
         ])
         if (cancelled) return
-        const reqList = reqRes.status === 'fulfilled' ? reqRes.value.data?.data || [] : []
-        const editList = editRes.status === 'fulfilled' ? editRes.value.data?.data || [] : []
-        const pendingReq = reqList.filter((r) => (r.status || 'pending') === 'pending').length
-        const pendingEdit = editList.filter((r) => (r.status || 'pending') === 'pending').length
+        // listRequests returns { requests: [...] }; listEditRequests
+        // returns { expenses: [...] } — parse the wrapped shapes.
+        const reqData = reqRes.status === 'fulfilled' ? reqRes.value.data?.data || {} : {}
+        const editData = editRes.status === 'fulfilled' ? editRes.value.data?.data || {} : {}
+        const reqList = Array.isArray(reqData) ? reqData : reqData.requests || []
+        const editList = Array.isArray(editData) ? editData : editData.expenses || []
+        const pendingReq = reqList.filter((r) => (r.status || 'PENDING') === 'PENDING').length
+        const pendingEdit = editList.filter((r) => (r.editRequest?.status || 'PENDING') === 'PENDING').length
         setNotifCount(pendingReq + pendingEdit)
       } catch {
         if (!cancelled) setNotifCount(0)
@@ -51,34 +54,6 @@ export default function Navbar() {
       window.clearInterval(timer)
     }
   }, [activeGroup?._id])
-
-  async function handleLoadDemo() {
-    if (!window.confirm(t('confirmLoadDemo'))) return
-    setDemoBusy(true)
-    try {
-      await api.post('/demo/load')
-      pushToast('success', t('demoLoaded'))
-      await fetchMyGroups()
-    } catch (e) {
-      pushToast('error', e?.response?.data?.message || t('failedToLoad'))
-    } finally {
-      setDemoBusy(false)
-    }
-  }
-
-  async function handleClearDemo() {
-    if (!window.confirm(t('confirmClearDemo'))) return
-    setDemoBusy(true)
-    try {
-      await api.delete('/demo/clear')
-      pushToast('success', t('demoCleared'))
-      await fetchMyGroups()
-    } catch (e) {
-      pushToast('error', e?.response?.data?.message || t('failedToLoad'))
-    } finally {
-      setDemoBusy(false)
-    }
-  }
 
   function handleLogout() {
     logout()
@@ -107,8 +82,8 @@ export default function Navbar() {
           {groupOpen && (
             <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-pop overflow-hidden z-50">
               <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('members')}</div>
-              {myGroups.length === 0 && <div className="px-4 py-3 text-sm text-slate-500">{t('noGroups')}</div>}
-              {myGroups.map((g) => (
+              {(myGroups || []).length === 0 && <div className="px-4 py-3 text-sm text-slate-500">{t('noGroups')}</div>}
+              {(myGroups || []).map((g) => (
                 <button
                   key={g._id}
                   onClick={() => {
@@ -185,23 +160,6 @@ export default function Navbar() {
             {t('superAdmin')}
           </button>
         )}
-
-        <button
-          onClick={handleLoadDemo}
-          disabled={demoBusy}
-          className="hidden md:flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 disabled:opacity-50"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          {t('loadDemoData')}
-        </button>
-        <button
-          onClick={handleClearDemo}
-          disabled={demoBusy}
-          className="hidden md:flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100 disabled:opacity-50"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          {t('clearDemoData')}
-        </button>
 
         {activeGroup && (
           <button

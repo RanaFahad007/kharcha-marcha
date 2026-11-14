@@ -43,7 +43,8 @@ export default function GroupDashboard() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  const resolvedGroupId = groupId || activeGroup?._id || myGroups[0]?._id
+  const groupsArr = Array.isArray(myGroups) ? myGroups : []
+  const resolvedGroupId = groupId || activeGroup?._id || groupsArr[0]?._id
 
   const loadAll = useCallback(async () => {
     if (!resolvedGroupId) {
@@ -63,10 +64,14 @@ export default function GroupDashboard() {
         api.get(`/groups/${resolvedGroupId}/expenses`, { params }),
         api.get(`/groups/${resolvedGroupId}/balances`)
       ])
-      const g = groupRes.data?.data || groupRes.data
-      setGroup(g)
-      setMembers(membersRes.data?.data || [])
-      setExpenses(expensesRes.data?.data || [])
+      // Backend wraps every payload: { data: { group } }, { data: { members } },
+      // { data: { expenses } }, { data: { balances, settlements } }.
+      const gData = groupRes.data?.data || {}
+      setGroup(gData.group || gData)
+      const mData = membersRes.data?.data || {}
+      setMembers(Array.isArray(mData) ? mData : mData.members || [])
+      const eData = expensesRes.data?.data || {}
+      setExpenses(Array.isArray(eData) ? eData : eData.expenses || [])
       const bal = balancesRes.data?.data || balancesRes.data || {}
       setBalances(bal.balances || [])
       setSettlements(bal.settlements || [])
@@ -79,7 +84,7 @@ export default function GroupDashboard() {
 
   useEffect(() => {
     if (resolvedGroupId && activeGroup?._id !== resolvedGroupId) {
-      const found = myGroups.find((g) => g._id === resolvedGroupId)
+      const found = groupsArr.find((g) => g._id === resolvedGroupId)
       if (found) setActiveGroup(found)
     }
   }, [resolvedGroupId, activeGroup?._id, myGroups, setActiveGroup])
@@ -117,6 +122,36 @@ export default function GroupDashboard() {
   const yourShare = Number(myBalance?.totalShare ?? 0)
   const currency = group?.currency || ''
   const now = new Date()
+  // The group-wide month total (admin only). Members see only their own
+  // share of this month's expenses — their full share of each visible
+  // expense, so other members' amounts never leak through the budget bar.
+  // Own share of every visible expense (members see only their own numbers).
+  const myTotalSpent = useMemo(
+    () =>
+      expenses.reduce((s, e) => {
+        const mine = (e.splitBetween || []).find((x) => idOf(x.user) === user?._id)
+        if (mine) return s + (Number(mine.shareAmount) || 0)
+        if (idOf(e.paidBy) === user?._id) return s + (Number(e.amount) || 0)
+        return s
+      }, 0),
+    [expenses, user?._id]
+  )
+  const myMonthTotal = useMemo(
+    () =>
+      expenses
+        .filter((e) => {
+          const d = new Date(e.date || e.createdAt)
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+        })
+        .reduce((s, e) => {
+          const mine = (e.splitBetween || []).find((x) => idOf(x.user) === user?._id)
+          if (mine) return s + (Number(mine.shareAmount) || 0)
+          if (idOf(e.paidBy) === user?._id) return s + (Number(e.amount) || 0)
+          return s
+        }, 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [expenses, user?._id]
+  )
   const monthTotal = useMemo(
     () =>
       expenses
@@ -131,10 +166,26 @@ export default function GroupDashboard() {
   const monthlyBudget = Number(group?.monthlyBudget) || 0
   const budgetInfo = budgetStatus(monthTotal, monthlyBudget)
 
+  // The group creator is the admin; the backend returns the caller's role
+  // as group.myRole ('ADMIN' / 'MEMBER') — use it first, fall back to the
+  // membership list (roles are uppercase on the backend).
   const isAdmin = useMemo(() => {
+    if (group?.myRole === 'ADMIN') return true
+    if (group?.myRole === 'MEMBER') return false
     if (!user) return false
-    return members.some((m) => idOf(m.user || m) === user._id && (m.role === 'admin' || m.role === 'owner')) || group?.isAdmin === true || group?.role === 'admin'
+    return members.some((m) => idOf(m.user || m) === user._id && m.role === 'ADMIN')
   }, [members, user, group])
+
+  // Defense in depth: the backend already filters /balances for members,
+  // but never render another member's debts/balances to a non-admin.
+  const visibleSettlements = useMemo(() => {
+    if (isAdmin) return settlements
+    return settlements.filter((s) => idOf(s.from) === user?._id || idOf(s.to) === user?._id)
+  }, [settlements, isAdmin, user?._id])
+  const visibleBalances = useMemo(() => {
+    if (isAdmin) return balances
+    return balances.filter((b) => idOf(b.user) === user?._id)
+  }, [balances, isAdmin, user?._id])
 
   async function handleDelete(exp) {
     if (!isAdmin) {
@@ -156,7 +207,9 @@ export default function GroupDashboard() {
     try {
       const filters = { from: dateFrom, to: dateTo, category, search: search.trim() || undefined }
       const data = await fetchExport(resolvedGroupId, filters)
-      const payload = { ...data, group: data.group || group, settlements, balances }
+      // Use the export endpoint's own (privacy-filtered) settlements and
+      // balances — never overwrite them with the dashboard's unfiltered ones.
+      const payload = { ...data, group: data.group || group }
       if (kind === 'csv') {
         downloadCSV(payload, `${(group?.name || 'splittrack').replace(/[^a-z0-9-_]+/gi, '-').toLowerCase()}-expenses.csv`)
       } else {
@@ -246,8 +299,8 @@ export default function GroupDashboard() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
-          <div className="text-sm text-slate-500">{t('totalSpent')}</div>
-          <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1 break-words">{currency} {totalSpent.toFixed(2)}</div>
+          <div className="text-sm text-slate-500">{isAdmin ? t('totalSpent') : t('yourSpending')}</div>
+          <div className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white mt-1 break-words">{currency} {(isAdmin ? totalSpent : myTotalSpent).toFixed(2)}</div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5">
           <div className="text-sm text-slate-500">{t('yourShare')}</div>
@@ -263,7 +316,7 @@ export default function GroupDashboard() {
         </div>
       </div>
 
-      {monthlyBudget > 0 && (
+      {monthlyBudget > 0 && isAdmin && (
         <div
           className={`rounded-2xl border px-5 py-4 flex flex-wrap items-center gap-3 ${
             budgetInfo.level === 'over'
@@ -289,7 +342,13 @@ export default function GroupDashboard() {
         </div>
       )}
 
-      <AnalyticsSection expenses={expenses} members={members} group={group} currency={currency} />
+      {!isAdmin && (
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-5 py-3 text-sm text-slate-600 dark:text-slate-300">
+          {t('spentThisMonth')}: {currency} {myMonthTotal.toFixed(2)}
+        </div>
+      )}
+
+      <AnalyticsSection expenses={expenses} members={members} group={group} currency={currency} isAdmin={isAdmin} currentUserId={user?._id} />
 
       <div className="grid lg:grid-cols-3 gap-6 items-start">
         <div className="lg:col-span-2 space-y-4">
@@ -414,7 +473,7 @@ export default function GroupDashboard() {
         </div>
 
         <div className="space-y-4">
-          <WhoOwesWhomCard group={group} balances={balances} settlements={settlements} onSettled={loadAll} currency={currency} />
+          <WhoOwesWhomCard group={group} balances={visibleBalances} settlements={visibleSettlements} onSettled={loadAll} currency={currency} isAdmin={isAdmin} />
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-4 sm:p-5 min-w-0">
             <h3 className="font-bold text-slate-900 dark:text-white mb-3">{t('members')}</h3>
             <div className="space-y-2">
@@ -426,8 +485,8 @@ export default function GroupDashboard() {
                   <div key={uid || nm} className="flex items-center gap-2 text-sm">
                     <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs">{nm.charAt(0).toUpperCase()}</span>
                     <span className="flex-1 truncate font-medium text-slate-900 dark:text-white min-w-0">{nm}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${role === 'admin' || role === 'owner' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
-                      {t(role === 'owner' ? 'admin' : role)}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${role === 'ADMIN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {role === 'ADMIN' ? t('admin') : t('member')}
                     </span>
                   </div>
                 )

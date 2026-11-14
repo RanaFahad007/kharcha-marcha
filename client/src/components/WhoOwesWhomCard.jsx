@@ -13,13 +13,19 @@ function userId(u) {
   return u._id || ''
 }
 
-export default function WhoOwesWhomCard({ group, balances, settlements, onSettled, currency }) {
+export default function WhoOwesWhomCard({ group, balances, settlements, onSettled, currency, isAdmin = true }) {
   const cur = currency || group?.currency || ''
-  const { t, pushToast } = useApp()
+  const { t, pushToast, user } = useApp()
   const [settlingKey, setSettlingKey] = useState(null)
 
-  const list = settlements || []
-  const balanceList = balances || []
+  // Privacy: the backend already filters /balances for members; filter
+  // again here so a non-admin never sees another member's debts/balances.
+  const list = isAdmin
+    ? settlements || []
+    : (settlements || []).filter((s) => userId(s.from) === user?._id || userId(s.to) === user?._id)
+  const balanceList = isAdmin
+    ? balances || []
+    : (balances || []).filter((b) => userId(b.user) === user?._id)
 
   async function handleSettle(s) {
     const fromId = userId(s.from)

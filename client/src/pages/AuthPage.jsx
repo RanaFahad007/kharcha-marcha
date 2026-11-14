@@ -86,7 +86,6 @@ export default function AuthPage() {
           <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="w-full text-center text-sm text-brand-700 hover:underline mt-4">
             {mode === 'login' ? t('noAccountYet') : t('alreadyHaveAccount')}
           </button>
-          <p className="text-center text-xs text-slate-400 mt-4">{t('demoHint')}</p>
         </div>
       </div>
     </div>

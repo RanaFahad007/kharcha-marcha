@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Loader2, Shield, Sparkles, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, Loader2, Shield, X } from 'lucide-react'
 import { useApp, api } from '../context/AppContext'
 
 function nameOf(v) {
@@ -44,7 +44,11 @@ export default function AdminPanel() {
         api.get(`/groups/${groupId}/requests`),
         api.get(`/groups/${groupId}/edit-requests`)
       ])
-      const g = groupRes.data?.data || groupRes.data
+      // Backend wraps every list: { data: { group } }, { data: { members } },
+      // { data: { requests } }, { data: { expenses } } (edit requests are
+      // expenses with a pending editRequest). Parse the wrapped shapes.
+      const gData = groupRes.data?.data || {}
+      const g = gData.group || gData
       setGroup(g)
       setGroupName(g?.name || '')
       setGroupColor(g?.color || '#0D9488')
@@ -52,9 +56,12 @@ export default function AdminPanel() {
       setAutoApproveJoin(g?.autoApproveJoin === true)
       setGroupCurrency(g?.currency || 'PKR')
       setMonthlyBudget(g?.monthlyBudget ? String(g.monthlyBudget) : '')
-      setMembers(membersRes.data?.data || [])
-      setRequests(reqRes.data?.data || [])
-      setEditRequests(editRes.data?.data || [])
+      const mData = membersRes.data?.data || {}
+      setMembers(Array.isArray(mData) ? mData : mData.members || [])
+      const rData = reqRes.data?.data || {}
+      setRequests(Array.isArray(rData) ? rData : rData.requests || [])
+      const eData = editRes.data?.data || {}
+      setEditRequests(Array.isArray(eData) ? eData : eData.expenses || [])
     } catch (e) {
       pushToast('error', e?.response?.data?.message || t('failedToLoad'))
     } finally {
@@ -66,10 +73,11 @@ export default function AdminPanel() {
     loadAll()
   }, [loadAll])
 
-  const pendingRequests = requests.filter((r) => (r.status || 'pending') === 'pending')
-  const pendingEdits = editRequests.filter((r) => (r.status || 'pending') === 'pending')
-  const adminCount = members.filter((m) => m.role === 'admin' || m.role === 'owner').length
-  const isLastAdmin = adminCount <= 1 && members.some((m) => idOf(m.user || m) === user?._id && (m.role === 'admin' || m.role === 'owner'))
+  // Roles from the backend are uppercase: 'ADMIN' / 'MEMBER'.
+  const pendingRequests = requests.filter((r) => (r.status || 'PENDING') === 'PENDING')
+  const pendingEdits = editRequests.filter((r) => (r.editRequest?.status || 'PENDING') === 'PENDING')
+  const adminCount = members.filter((m) => m.role === 'ADMIN').length
+  const isLastAdmin = adminCount <= 1 && members.some((m) => idOf(m.user || m) === user?._id && m.role === 'ADMIN')
 
   async function handleRole(member, role) {
     const uid = idOf(member.user || member)
@@ -99,7 +107,8 @@ export default function AdminPanel() {
   }
 
   async function handleEditRequest(req, action) {
-    const expenseId = idOf(req.expense || req.expenseId)
+    // Edit-request items are expenses with a pending editRequest.
+    const expenseId = req._id
     setBusy(true)
     try {
       await api.post(`/groups/${groupId}/expenses/${expenseId}/edit-request/${action}`)
@@ -139,34 +148,6 @@ export default function AdminPanel() {
       pushToast('success', t('leftGroup'))
       await fetchMyGroups()
       navigate('/')
-    } catch (e) {
-      pushToast('error', e?.response?.data?.message || t('failedToLoad'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleLoadDemo() {
-    if (!window.confirm(t('confirmLoadDemo'))) return
-    setBusy(true)
-    try {
-      await api.post('/demo/load')
-      pushToast('success', t('demoLoaded'))
-      loadAll()
-    } catch (e) {
-      pushToast('error', e?.response?.data?.message || t('failedToLoad'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleClearDemo() {
-    if (!window.confirm(t('confirmClearDemo'))) return
-    setBusy(true)
-    try {
-      await api.delete('/demo/clear')
-      pushToast('success', t('demoCleared'))
-      loadAll()
     } catch (e) {
       pushToast('error', e?.response?.data?.message || t('failedToLoad'))
     } finally {
@@ -233,18 +214,18 @@ export default function AdminPanel() {
                   <span className="block font-medium text-slate-900 dark:text-white truncate">{nm}</span>
                   <span className="block text-xs text-slate-500 truncate">{m.user?.email || ''}</span>
                 </span>
-                <span className={`text-xs px-2 py-1 rounded-full font-semibold flex items-center gap-1 ${role === 'admin' || role === 'owner' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`text-xs px-2 py-1 rounded-full font-semibold flex items-center gap-1 ${role === 'ADMIN' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
                   <Shield className="w-3 h-3" />
-                  {t(role === 'owner' ? 'admin' : role)}
+                  {role === 'ADMIN' ? t('admin') : t('member')}
                 </span>
                 {!isMe && (
                   <div className="flex gap-2">
-                    {role === 'member' ? (
-                      <button onClick={() => handleRole(m, 'admin')} disabled={busy} className="text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50">
+                    {role === 'MEMBER' ? (
+                      <button onClick={() => handleRole(m, 'ADMIN')} disabled={busy} className="text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50">
                         {t('promote')}
                       </button>
                     ) : (
-                      <button onClick={() => handleRole(m, 'member')} disabled={busy} className="text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50">
+                      <button onClick={() => handleRole(m, 'MEMBER')} disabled={busy} className="text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50">
                         {t('demote')}
                       </button>
                     )}
@@ -262,16 +243,17 @@ export default function AdminPanel() {
           {requests.length === 0 && <p className="p-6 text-sm text-slate-500">{t('noRequests')}</p>}
           {requests.map((r) => {
             const mid = r._id || r.membershipId
-            const nm = nameOf(r.user || r.member)
-            const st = r.status || 'pending'
+            // listRequests returns memberships with the user populated as userId.
+            const nm = nameOf(r.userId || r.user || r.member)
+            const st = (r.status || 'PENDING').toUpperCase()
             return (
               <div key={mid} className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-t border-slate-100 dark:border-slate-700 first:border-t-0 flex-wrap min-w-0">
                 <span className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">{nm.charAt(0).toUpperCase()}</span>
                 <span className="flex-1 min-w-[120px] font-medium text-slate-900 dark:text-white truncate">{nm}</span>
-                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${st === 'pending' ? 'bg-amber-100 text-amber-800' : st === 'accepted' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {t(st)}
+                <span className={`text-xs px-2 py-1 rounded-full font-semibold ${st === 'PENDING' ? 'bg-amber-100 text-amber-800' : st === 'ACCEPTED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                  {t(st.toLowerCase())}
                 </span>
-                {st === 'pending' && (
+                {st === 'PENDING' && (
                   <div className="flex gap-2">
                     <button onClick={() => handleRequest(mid, 'approve')} disabled={busy} className="flex items-center gap-1 text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
                       <Check className="w-3.5 h-3.5" />
@@ -293,19 +275,21 @@ export default function AdminPanel() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card overflow-hidden min-w-0">
           {editRequests.length === 0 && <p className="p-6 text-sm text-slate-500">{t('noEditRequests')}</p>}
           {editRequests.map((r) => {
-            const st = r.status || 'pending'
-            const expTitle = r.expense?.title || r.title || t('expense')
-            const nm = nameOf(r.requestedBy || r.user)
+            // Edit-request items are expenses: editRequest { status, reason },
+            // requester is the expense creator, before/after from editHistory.
+            const st = (r.editRequest?.status || 'PENDING').toUpperCase()
+            const expTitle = r.title || t('expense')
+            const nm = nameOf(r.createdBy || r.requestedBy || r.user)
             return (
               <div key={r._id || `${expTitle}-${nm}`} className="px-4 sm:px-5 py-4 border-t border-slate-100 dark:border-slate-700 first:border-t-0 min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
                   <span className="flex-1 font-medium text-slate-900 dark:text-white min-w-0 break-words">
                     {expTitle} — {nm}
                   </span>
-                  <span className={`text-xs px-2 py-1 rounded-full font-semibold ${st === 'pending' ? 'bg-amber-100 text-amber-800' : st === 'approved' || st === 'accepted' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                    {t(st === 'approved' ? 'accepted' : st)}
+                  <span className={`text-xs px-2 py-1 rounded-full font-semibold ${st === 'PENDING' ? 'bg-amber-100 text-amber-800' : st === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    {t(st.toLowerCase())}
                   </span>
-                  {st === 'pending' && (
+                  {st === 'PENDING' && (
                     <div className="flex gap-2">
                       <button onClick={() => handleEditRequest(r, 'approve')} disabled={busy} className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
                         <Check className="w-3.5 h-3.5" />
@@ -319,10 +303,11 @@ export default function AdminPanel() {
                   )}
                 </div>
                 {(() => {
-                  const prevAmount = r.previousAmount ?? r.expense?.editHistory?.[r.expense.editHistory.length - 1]?.previousAmount ?? r.prevAmount
-                  const prevTitle = r.previousTitle ?? r.expense?.editHistory?.[r.expense.editHistory.length - 1]?.previousTitle ?? r.prevTitle
-                  const curAmount = r.expense?.amount ?? r.amount
-                  const curTitle = r.expense?.title ?? r.title
+                  const lastEdit = r.editHistory?.[r.editHistory.length - 1]
+                  const prevAmount = lastEdit?.previousAmount ?? r.previousAmount
+                  const prevTitle = lastEdit?.previousTitle ?? r.previousTitle
+                  const curAmount = r.amount
+                  const curTitle = r.title
                   if (prevAmount === undefined && !prevTitle && curAmount === undefined) return null
                   return (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-sm">
@@ -339,7 +324,7 @@ export default function AdminPanel() {
                     </div>
                   )
                 })()}
-                {r.reason && <p className="text-sm text-slate-500 mt-2">{t('reason')}: {r.reason}</p>}
+                {r.editRequest?.reason && <p className="text-sm text-slate-500 mt-2">{t('reason')}: {r.editRequest.reason}</p>}
               </div>
             )
           })}
@@ -388,20 +373,6 @@ export default function AdminPanel() {
               {t('save')}
             </button>
           </form>
-
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card p-5 sm:p-6 min-w-0">
-            <h2 className="font-bold text-slate-900 dark:text-white mb-3">{t('loadDemoData')}</h2>
-            <div className="flex gap-2 flex-wrap">
-              <button onClick={handleLoadDemo} disabled={busy} className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
-                <Sparkles className="w-4 h-4" />
-                {t('loadDemoData')}
-              </button>
-              <button onClick={handleClearDemo} disabled={busy} className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-300 text-sm font-semibold hover:bg-slate-50 disabled:opacity-60">
-                <Trash2 className="w-4 h-4" />
-                {t('clearDemoData')}
-              </button>
-            </div>
-          </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-red-200 dark:border-red-800 shadow-card p-5 sm:p-6 min-w-0">
             <h2 className="font-bold text-red-700">{t('dangerZone')}</h2>

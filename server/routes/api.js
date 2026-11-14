@@ -9,24 +9,22 @@ const {
 const authController = require('../controllers/authController');
 const groupController = require('../controllers/groupController');
 const expenseController = require('../controllers/expenseController');
-const demoController = require('../controllers/demoController');
 const adminController = require('../controllers/adminController');
 const activityController = require('../controllers/activityController');
 
 // ---- Super admin ----
 router.get('/admin/stats', authenticateJWT, requireSuperAdmin, adminController.getStats);
 router.get('/admin/groups', authenticateJWT, requireSuperAdmin, adminController.listAllGroups);
+router.get('/admin/users', authenticateJWT, requireSuperAdmin, adminController.listUsers);
+router.delete('/admin/groups/:groupId', authenticateJWT, requireSuperAdmin, adminController.deleteGroup);
 router.post('/admin/users/:userId/block', authenticateJWT, requireSuperAdmin, adminController.blockUser);
 router.post('/admin/users/:userId/unblock', authenticateJWT, requireSuperAdmin, adminController.unblockUser);
+router.delete('/admin/users/:userId', authenticateJWT, requireSuperAdmin, adminController.deleteUser);
 
 // ---- Auth ----
 router.post('/auth/signup', authController.signup);
 router.post('/auth/login', authController.login);
 router.get('/auth/me', authenticateJWT, authController.me);
-
-// ---- Demo ----
-router.post('/demo/load', authenticateJWT, demoController.loadDemo);
-router.delete('/demo/clear', authenticateJWT, demoController.clearDemo);
 
 // ---- Groups: join routes BEFORE :groupId routes so "join" is not
 // ---- treated as a groupId.

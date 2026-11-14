@@ -1,5 +1,6 @@
+import { Component } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, CheckCircle2, LayoutDashboard, Plus, Settings, UserPlus, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, LayoutDashboard, Plus, RefreshCw, Settings, UserPlus, X } from 'lucide-react'
 import { useApp } from './context/AppContext'
 import Navbar from './components/Navbar'
 import OnboardingCards from './components/OnboardingCards'
@@ -7,6 +8,47 @@ import AuthPage from './pages/AuthPage'
 import JoinGroupScreen from './pages/JoinGroupScreen'
 import GroupDashboard from './pages/GroupDashboard'
 import AdminPanel from './pages/AdminPanel'
+
+/**
+ * Error boundary: a render crash (e.g. an unexpected API shape) used to
+ * blank the whole page with no message. Now the user gets a friendly
+ * "Something went wrong — Reload" screen instead of a white page.
+ */
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error) {
+    // Keep the details in the console for debugging; the UI stays friendly.
+    console.error('App crashed:', error)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 px-4 text-center">
+          <AlertCircle className="w-10 h-10 text-red-500" />
+          <p className="font-bold text-slate-900 dark:text-white text-lg">Something went wrong</p>
+          <p className="text-sm text-slate-500">Please reload the page and try again.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center gap-2 px-5 py-2.5 min-h-[44px] rounded-lg bg-brand-600 text-white font-semibold hover:bg-brand-700"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Reload
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 function Toasts() {
   const { toasts, removeToast } = useApp()
@@ -49,7 +91,10 @@ function HomeRoute() {
       </div>
     )
   }
-  if (myGroups.length === 0) return <OnboardingCards />
+  // myGroups must always be an array — guard so a bad payload can never
+  // crash the dashboard again.
+  const groups = Array.isArray(myGroups) ? myGroups : []
+  if (groups.length === 0) return <OnboardingCards />
   return <GroupDashboard />
 }
 
@@ -130,7 +175,7 @@ function AuthedLayout({ children }) {
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Routes>
         <Route path="/login" element={<AuthPage />} />
         <Route
@@ -176,6 +221,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toasts />
-    </>
+    </ErrorBoundary>
   )
 }

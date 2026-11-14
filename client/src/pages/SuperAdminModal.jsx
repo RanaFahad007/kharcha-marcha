@@ -12,15 +12,23 @@ export default function SuperAdminModal({ open, onClose }) {
   const { user, t, pushToast } = useApp()
   const [stats, setStats] = useState(null)
   const [groups, setGroups] = useState([])
+  const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [statsRes, groupsRes] = await Promise.all([api.get('/admin/stats'), api.get('/admin/groups')])
+      const [statsRes, groupsRes, usersRes] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/groups'),
+        api.get('/admin/users'),
+      ])
       setStats(statsRes.data?.data || statsRes.data || null)
-      setGroups(groupsRes.data?.data || groupsRes.data || [])
+      const gData = groupsRes.data?.data || {}
+      setGroups(Array.isArray(gData) ? gData : gData.groups || [])
+      const uData = usersRes.data?.data || {}
+      setUsers(Array.isArray(uData) ? uData : uData.users || [])
     } catch (e) {
       pushToast('error', e?.response?.data?.message || t('failedToLoad'))
     } finally {
@@ -53,6 +61,26 @@ export default function SuperAdminModal({ open, onClose }) {
     }
   }
 
+  async function handleDeleteUser(targetUser) {
+    const uid = targetUser?._id || targetUser
+    if (!uid) return
+    if (uid === user?._id) {
+      pushToast('error', t('cannotBlockSelf'))
+      return
+    }
+    if (!window.confirm(t('confirmDeleteUser'))) return
+    setBusyId(uid)
+    try {
+      await api.delete(`/admin/users/${uid}`)
+      pushToast('success', t('userDeleted'))
+      load()
+    } catch (e) {
+      pushToast('error', e?.response?.data?.message || t('failedToLoad'))
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   if (!open) return null
 
   const statCards = [
@@ -60,18 +88,6 @@ export default function SuperAdminModal({ open, onClose }) {
     { label: t('totalGroups'), value: stats?.totalGroups ?? stats?.groups ?? stats?.groupCount ?? groups.length },
     { label: t('totalExpenses'), value: stats?.totalExpenses ?? stats?.expenses ?? stats?.expenseCount ?? '—' }
   ]
-
-  // Flatten unique users from groups for block/unblock (admin endpoints list groups; users come from group members/creators)
-  const usersMap = new Map()
-  groups.forEach((g) => {
-    const candidates = [...(g.members || []), g.createdBy, g.owner].filter(Boolean)
-    candidates.forEach((m) => {
-      const u = m.user || m
-      const id = u?._id || u
-      if (id && typeof u === 'object' && !usersMap.has(id)) usersMap.set(id, { ...u, _id: id })
-    })
-  })
-  const users = [...usersMap.values()]
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 modal-backdrop bg-black/50 overflow-y-auto" onClick={onClose}>
@@ -165,7 +181,7 @@ export default function SuperAdminModal({ open, onClose }) {
                     <span className="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xs">{(u.name || 'U').charAt(0).toUpperCase()}</span>
                     <span className="flex-1 min-w-0">
                       <span className="block font-medium text-slate-900 dark:text-white truncate">{nameOf(u)}</span>
-                      <span className="block text-xs text-slate-500 truncate">{u.email || ''}</span>
+                      <span className="block text-xs text-slate-500 truncate">{u.emailOrPhone || u.email || ''}</span>
                     </span>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isBlocked ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>{isBlocked ? t('blocked') : t('active')}</span>
                     <button
@@ -176,6 +192,14 @@ export default function SuperAdminModal({ open, onClose }) {
                     >
                       <Ban className="w-3.5 h-3.5" />
                       {isBlocked ? t('unblockUser') : t('blockUser')}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteUser(u)}
+                      disabled={busyId === u._id || isSelf}
+                      title={isSelf ? t('cannotBlockSelf') : t('deleteUser')}
+                      className="flex items-center gap-1 text-xs font-semibold px-3 py-2.5 min-h-[44px] rounded-lg border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {t('deleteUser')}
                     </button>
                   </div>
                 )

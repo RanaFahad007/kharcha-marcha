@@ -3,7 +3,8 @@
 A production-ready, Splitwise-like web app for university friend groups and
 families. Multi-user, multi-group, with JWT auth, invite codes, approval
 workflows, edit-once expense rules, debt simplification ("who owes whom"),
-role-based exports, and a 1-click demo sandbox for live showcases.
+role-based exports, and strict privacy: group admins see everything,
+regular members see only their own data.
 
 - **Backend:** Node.js + Express + MongoDB/Mongoose, JWT, bcryptjs, CORS, dotenv
 - **Frontend:** React 18 + Vite 5 + Tailwind CSS + Lucide-React + Axios +
@@ -25,7 +26,7 @@ splittrack/
 │   ├── middleware/auth.js      # authenticateJWT, requireGroupMember,
 │   │                           # requireGroupAdmin, requireSuperAdmin
 │   ├── utils/debtSimplifier.js # computeBalances + greedy min-transaction simplifyDebts
-│   ├── controllers/            # auth, group, expense, demo
+│   ├── controllers/            # auth, group, expense, activity, admin
 │   ├── routes/api.js           # all /api routes
 │   └── scripts/migrateLegacyData.js
 └── client/                     # React + Vite app (port 5173)
@@ -94,7 +95,7 @@ right next to the Group Switcher — never hidden inside a menu or drawer.
 It always shows all three options — **English / Roman Urdu / العربية** —
 with the active language highlighted (indigo). Clicking one instantly
 re-translates the whole UI via `src/i18n/locales.js` + `AppContext`
-(`t(key)` everywhere, 176 keys in each language) and persists the choice
+(`t(key)` everywhere, 260 keys in each language) and persists the choice
 in `localStorage` (`splittrack_lang`); Arabic also switches the page to
 RTL (`dir="rtl"`).
 
@@ -113,24 +114,33 @@ RTL (`dir="rtl"`).
    the full report; members only get entries they paid for or are split on.
 7. Admin Panel → Members / Join Requests / 2nd-Edit Requests / Settings.
 
-## Demo sandbox (1-click, for the live presentation)
+## Privacy model — admin sees everything, members see only their own
 
-- In the Navbar (or Admin Panel), click **Load Demo Data**.
-  - Creates the group **"🎓 Uni Friends Hostel & Trip (Demo)"** with you as ADMIN.
-  - Creates 4 demo members — Ali, Sara, Bilal, Zara (`isDemoUser: true`,
-    password `demo1234`) — as accepted members.
-  - Seeds **15 realistic expenses** over the last 30 days: Food (Pizza Night,
-    Chai Dhaba), Groceries (Hostel Milk & Eggs), Transport (Uber to Campus,
-    Rickshaw), Trip (Murree Trip Van Fuel, Hotel Advance), Stationery
-    (Photocopies & Lab Manuals), Utilities — plus **1 pending edit request**
-    and **1 pending join request (Hina)**, so every feature is demonstrable
-    without typing.
-  - Loading is idempotent: running it twice returns the existing demo group.
-- Click **Clear Demo Data** to delete only demo groups, memberships, expenses
-  and demo users. Real groups and users are never touched.
+There is **no demo data** in the app. Every group, member and expense is
+real data entered by users.
 
-Demo accounts (created by Load Demo Data): Ali, Sara, Bilal, Zara — password
-`demo1234`. You can also sign up a fresh account of your own at any time.
+- **Group admin** (the creator, or anyone promoted to ADMIN) sees all
+  group data: every expense, every member's balance, all debts, the full
+  activity/audit log, group-wide analytics and budget, and the full export.
+- **Regular members** see only their own data, enforced **server-side**
+  (the frontend also filters, so nothing leaks through the UI):
+  - Expenses list: only expenses they paid for or are split on.
+  - Who owes whom / balances: only their own balance row and debts where
+    they are the debtor or the creditor.
+  - Analytics: category totals and leaderboard from their own share only;
+    the group budget bar is hidden for members (they see only their own
+    spending this month).
+  - Activity feed: only entries about their own actions.
+  - Export (CSV/PDF): only their own expenses and balances.
+  - The members list itself stays visible to everyone (needed to split
+    bills), but no amounts or balances of other members leak through it.
+- The admin role comes from the membership (`myRole` on the group, roles
+  `ADMIN` / `MEMBER`); the group creator starts as admin and can promote
+  or demote members in the Admin Panel.
+- **SuperAdmin** (`superadmin@splittrack.app`) sees platform-wide stats,
+  all groups and all users, and can block/unblock or delete empty user
+  accounts (an account with groups/expenses cannot be deleted — block it
+  instead).
 
 ## Key rules implemented
 
@@ -152,7 +162,15 @@ Demo accounts (created by Load Demo Data): Ali, Sara, Bilal, Zara — password
   settlements.
 - **Export:** `GET /api/groups/:groupId/expenses/export` — aggregation
   `$match` / `$sort` / `$limit: 5000` / `$facet`, always excluding deleted and
-  hidden expenses, with the member visibility filter applied server-side.
+  hidden expenses, with the member visibility filter applied server-side
+  (members export only their own expenses and their own balance row).
+- **Privacy (server-enforced):** `GET /groups/:groupId/expenses`,
+  `/balances`, `/activity` and `/expenses/export` all filter by the
+  caller's membership role (`req.groupRole`): admins get everything,
+  members get only rows involving them. The frontend mirrors the same
+  rule in the dashboard, analytics, Who-Owes-Whom card and activity
+  drawer, and a React Error Boundary shows a friendly Reload screen
+  instead of a blank page if a render ever fails.
 
 ## Migration script (legacy data)
 
@@ -246,13 +264,6 @@ in-memory smoke test above proves the API itself works end to end.
 - **Export** adds `?search` (title/notes) and `$facet` returning
   `{groupName, currency, exportedAt, role, totalsByCategory, expenses,
   simplifiedDebts}`.
-- **Demo v2:** group **"🎓 Uni Friends Hostel & Northern Trip (Demo)"**,
-  `monthlyBudget: 50000`, currency PKR; demo users **Ali Khan, Sara Ahmed,
-  Bilal Raza, Zara Tariq** (ACCEPTED), **Hamza Malik** PENDING join request;
-  **15 expenses over the last 25 days using all 4 split methods + 1
-  settlement**; pending 2nd-edit request — Bilal, Chai Dhaba 1200 → 1500,
-  *"Forgot to add paratha bill"*; **6 ActivityLog entries**. Load is
-  idempotent; clear deletes only demo data + demo logs.
 - **Migration** (`scripts/migrateLegacyData.js`): transactional when the
   DB supports it (falls back with a warning on standalone servers),
   idempotent, backfills `avatarColor`, `currency`, `monthlyBudget`,
@@ -260,9 +271,10 @@ in-memory smoke test above proves the API itself works end to end.
   Dry run by default; `--confirm` to apply.
 - **SuperAdmin:** startup seed + `scripts/seedSuperAdmin.js` (idempotent,
   only if no superadmin exists). Routes (all `requireSuperAdmin`):
-  `GET /api/admin/stats`, `GET /api/admin/groups`,
+  `GET /api/admin/stats`, `GET /api/admin/groups`, `GET /api/admin/users`,
   `POST /api/admin/users/:userId/block|unblock` (cannot block self or
-  another superadmin).
+  another superadmin), `DELETE /api/admin/users/:userId` (only accounts
+  with no groups, memberships or expenses — otherwise it returns 400).
 
 ## Frontend v2
 
@@ -287,7 +299,7 @@ in-memory smoke test above proves the API itself works end to end.
   Budget Settings now include currency + monthlyBudget.
 - **NEW `pages/SuperAdminModal.jsx`:** platform stats, all-groups table,
   block/unblock users (Navbar button, only for superadmins).
-- **i18n: 263 keys in each of en, ur, ar — zero missing.**
+- **i18n: 260 keys in each of en, ur, ar — zero missing, zero demo keys.**
 
 ## SuperAdmin credentials (for the showcase)
 
@@ -330,27 +342,19 @@ vercel --prod
 # integration) — every push to main then auto-deploys.
 ```
 
-### Current status (Nov 14, 2026, ~19:15 PKT) — DEPLOY BLOCKED, code ready
+### Current status (Nov 14, 2026, ~19:23 PKT) — LIVE ✅
 
-- Repo: **https://github.com/RanaFahad007/kharcha-marcha** (`main`, up to date,
-  includes the Vercel adapter below).
-- **No live Vercel URL yet.** Project creation fails with Vercel API
-  `403 forbidden` on scope `fahads-projects-0a698196` (team
-  `team_rgpSAdhUrWJ3j7Dgd5z74Ly4`): *"Not authorized: Trying to access
-  resource under scope. You must re-authenticate to this scope."* The
-  Vercel OAuth connection in this environment only has identity scopes
-  (openid/email/profile); a token refresh does not add the team scope,
-  and the `authorize_team_access` tool the API error asks for does not
-  exist in this environment's Vercel MCP server.
-- **Exact unblock step:** the user must grant this Vercel connection
-  access to the team **"Fahad's Projects"** (`fahads-projects-0a698196`)
-  through Vercel consent — re-run the Vercel connect flow and select that
-  team when Vercel asks which teams the app may access (completing SSO
-  alone does not add a missing team grant). Then retry: create project
-  `kharcha-marcha` → set the env vars above → deploy → verify.
-- The live app to verify after deploy: sign up a new user, Load Demo
-  Data, check the dashboard, and log in as superadmin (below). The
-  superadmin is seeded automatically on the first API request.
+- Repo: **https://github.com/RanaFahad007/kharcha-marcha** (`main`, up to date).
+- **Live: https://kharcha-marcha.vercel.app** — deployed via Vercel CLI
+  (bot35470-5848, team "Fahad's Projects"), full-stack on one domain
+  (frontend + Express serverless `api/index.js` + Atlas).
+- Verified live: homepage 200, superadmin login 200, real group create
+  + real expense add working, demo endpoints return 404. The live
+  database was cleaned of all demo groups/users before student testing.
+- Env vars set on Vercel: MONGODB_URI / MONGO_URI / JWT_SECRET /
+  JWT_EXPIRES_IN / FRONTEND_URL / VITE_API_URL.
+- Earlier block (Vercel OAuth connection had identity scopes only, 403 on
+  the team) was unblocked via Vercel CLI device login — no longer applies.
 
 ### Vercel adapter (what changed for serverless)
 
@@ -407,3 +411,68 @@ vercel --prod
   lookups, so the Atlas connection cannot be proven from here; it does
   not prove the URI/password wrong. Use the showcase machine / Vercel +
   Render for the live connection.
+
+---
+
+# v3 — Bug-fix release for student testing (Nov 14, 2026)
+
+## What was broken (found by a live browser test) and fixed
+
+The browser test showed: "Load Demo Data" did nothing, the group-switcher
+dropdown crashed the app to a blank white page, and the "Create Group"
+button disappeared after the first load. Root cause: the backend wraps
+every payload (`{ success, data: { groups } }`, `{ data: { group } }`,
+`{ data: { members } }`, `{ data: { expenses } }`, ...), but the frontend
+parsed most of them as if `data` itself were the array/object — so
+`myGroups` became the object `{groups: [...]}`, `myGroups.map` threw,
+and the dashboard never showed any group. Fixed in:
+
+- `AppContext.fetchMyGroups` — parses `data.groups` and always stores an
+  array; same wrapped-shape parsing fixed in `GroupDashboard.loadAll`
+  (group/members/expenses/balances), `AdminPanel.loadAll`
+  (group/members/requests/edit-requests), `OnboardingCards` (created
+  group), `JoinGroupScreen` (`myStatus`, join membership status),
+  `SuperAdminModal` (groups + new `/admin/users` list),
+  `ActivityFeedDrawer` (`activity`, actor is `actorId`), `Navbar`
+  notification counts, and `GroupDashboard` export (uses the export
+  endpoint's own filtered settlements/balances instead of overwriting
+  them with the dashboard's unfiltered ones).
+- `isAdmin` now uses `group.myRole` (`ADMIN`/`MEMBER`) — the old check
+  compared against lowercase `'admin'`/`'owner'`, so the admin was never
+  recognised (delete button stayed disabled, role buttons sent lowercase
+  roles the backend rejects with 400). Role display, promote/demote,
+  join-request statuses and member names fixed the same way.
+- `App.jsx`: array guard on `myGroups` + a React **Error Boundary** —
+  a render error now shows "Something went wrong — Reload" instead of a
+  blank white page.
+- Branding: header, PDF export title and WhatsApp invite text now say
+  **Kharcha Marcha** everywhere (no "SplitTrack" left in user-facing UI).
+
+## Demo data removed completely
+
+- No "Load Demo Data" / "Clear Demo Data" buttons anywhere (Navbar,
+  Admin Panel, login hint all removed), no `POST /demo/load` or
+  `DELETE /demo/clear` routes (both return 404), `demoController.js`
+  deleted, `isDemoUser`/`isDemoGroup` fields removed from the models.
+- The live database was cleaned first via the old demo-clear endpoint:
+  32 expenses, 12 activity logs, 12 memberships, 2 demo groups and 5 demo
+  users deleted; the test account `testuser@example.com` was deleted too.
+  Students start from a clean database with only real data they enter.
+
+## Verification (v3)
+
+- `node --check` — all server JS files pass.
+- Backend smoke test (in-memory MongoDB, real Express app):
+  **34/34 PASS** — signup, group create, join PENDING → approve, expense
+  create, privacy checks (member sees only their own expenses/balances/
+  debts/activity/export rows; admin sees all; direct access to another
+  member's expense returns 404), roles (`myRole` ADMIN/MEMBER), demo
+  endpoints 404, superadmin login, `/admin/users` list, delete of an
+  empty account, delete-with-data refused (400), block → login 403 →
+  unblock.
+- Frontend: `npm run build` — **succeeded, ~9.1s** (only the pre-existing
+  >500 kB jspdf chunk warning).
+- i18n: **260 keys in each of en, ur, ar — zero missing.**
+- Live check after deploy: fresh signup, real group + real expense,
+  group-switcher dropdown, second-member privacy, no demo button, no
+  "SplitTrack" branding.

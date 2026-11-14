@@ -1,5 +1,5 @@
 /**
- * seedSuperAdmin.js — create the SplitTrack super admin (idempotent).
+ * seedSuperAdmin.js — create the Kharcha Marcha super admin (idempotent).
  *
  *   node scripts/seedSuperAdmin.js
  *

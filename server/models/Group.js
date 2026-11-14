@@ -12,7 +12,6 @@ const groupSchema = new mongoose.Schema(
     },
     invitesEnabled: { type: Boolean, default: true },
     autoApproveJoin: { type: Boolean, default: false },
-    isDemoGroup: { type: Boolean, default: false },
     currency: {
       type: String,
       enum: ['PKR', 'USD', 'EUR', 'AED', 'SAR', 'INR'],

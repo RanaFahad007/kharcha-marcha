@@ -579,24 +579,37 @@ async function getBalances(req, res, next) {
       .populate('paidBy', 'name emailOrPhone avatarColor')
       .populate('splitBetween.user', 'name emailOrPhone avatarColor');
     const { memberBalances, simplifiedDebts } = computeBalancesAndDebts(expenses, members);
+    // Privacy: ADMIN sees every balance/debt; a MEMBER sees only their own
+    // balance row and debts where they are the debtor or the creditor.
+    let balances = memberBalances;
+    let debts = simplifiedDebts;
+    if (req.groupRole !== 'ADMIN') {
+      const me = String(req.user._id);
+      balances = memberBalances.filter((b) => String(b.user?._id || b.user) === me);
+      debts = simplifiedDebts.filter(
+        (s) =>
+          String(s.fromUser?._id || s.from?._id || s.from) === me ||
+          String(s.toUser?._id || s.to?._id || s.to) === me
+      );
+    }
     return res.json({
       success: true,
       data: {
-        memberBalances: memberBalances.map((b) => ({
+        memberBalances: balances.map((b) => ({
           user: fmtUser(b.user),
           totalPaid: b.totalPaid,
           totalShare: b.totalShare,
           netBalance: b.netBalance,
         })),
-        simplifiedDebts: simplifiedDebts.map(fmtDebt),
+        simplifiedDebts: debts.map(fmtDebt),
         // v1 aliases
-        balances: memberBalances.map((b) => ({
+        balances: balances.map((b) => ({
           user: fmtUser(b.user),
           totalPaid: b.totalPaid,
           totalShare: b.totalShare,
           netBalance: b.netBalance,
         })),
-        settlements: simplifiedDebts.map(fmtDebt),
+        settlements: debts.map(fmtDebt),
       },
     });
   } catch (err) {
@@ -724,7 +737,7 @@ async function exportExpenses(req, res, next) {
     const totalAmount = round2(rows.reduce((a, e) => a + (Number(e.amount) || 0), 0));
 
     // Balances / simplified debts from ALL visible (non-deleted, non-hidden)
-    // group expenses; members only see their own debt rows.
+    // group expenses; members only see their own balance row and debt rows.
     const memberships = await Membership.find({ groupId, status: 'ACCEPTED' }).populate(
       'userId',
       'name emailOrPhone avatarColor'
@@ -735,9 +748,16 @@ async function exportExpenses(req, res, next) {
       .populate('splitBetween.user', 'name emailOrPhone avatarColor');
     const { memberBalances, simplifiedDebts } = computeBalancesAndDebts(allExpenses, members);
     let debts = simplifiedDebts.map(fmtDebt);
+    let balancesOut = memberBalances.map((b) => ({
+      user: fmtUser(b.user),
+      totalPaid: b.totalPaid,
+      totalShare: b.totalShare,
+      netBalance: b.netBalance,
+    }));
     if (!isAdmin) {
       const me = String(req.user._id);
       debts = debts.filter((s) => String(s.fromUser._id) === me || String(s.toUser._id) === me);
+      balancesOut = balancesOut.filter((b) => String(b.user?._id) === me);
     }
 
     return res.json({
@@ -750,12 +770,7 @@ async function exportExpenses(req, res, next) {
         totalsByCategory,
         expenses: rows,
         simplifiedDebts: debts,
-        memberBalances: memberBalances.map((b) => ({
-          user: fmtUser(b.user),
-          totalPaid: b.totalPaid,
-          totalShare: b.totalShare,
-          netBalance: b.netBalance,
-        })),
+        memberBalances: balancesOut,
         // v1 aliases kept for existing clients
         summary: {
           count: rows.length,

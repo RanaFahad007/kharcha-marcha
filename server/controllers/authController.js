@@ -9,7 +9,6 @@ function publicUser(user) {
     name: user.name,
     emailOrPhone: user.emailOrPhone,
     isSuperAdmin: user.isSuperAdmin,
-    isDemoUser: user.isDemoUser,
     avatarColor: user.avatarColor || '#6366F1',
     lastActiveGroupId: user.lastActiveGroupId || null,
   };
@@ -104,7 +103,7 @@ async function me(req, res, next) {
     const memberships = await Membership.find({
       userId: req.user._id,
       status: 'ACCEPTED',
-    }).populate('groupId', 'name color avatar inviteCode isDemoGroup');
+    }).populate('groupId', 'name color avatar inviteCode');
     const groups = memberships
       .filter((m) => m.groupId)
       .map((m) => ({
@@ -113,7 +112,6 @@ async function me(req, res, next) {
         color: m.groupId.color,
         avatar: m.groupId.avatar,
         inviteCode: m.groupId.inviteCode,
-        isDemoGroup: m.groupId.isDemoGroup,
         role: m.role,
         joinedAt: m.joinedAt,
       }));

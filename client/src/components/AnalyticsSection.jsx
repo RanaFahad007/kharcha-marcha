@@ -38,24 +38,43 @@ export function budgetBarClass(level) {
   return 'bg-emerald-500'
 }
 
-export default function AnalyticsSection({ expenses = [], members = [], group = {}, currency = '' }) {
+export default function AnalyticsSection({ expenses = [], members = [], group = {}, currency = '', isAdmin = true, currentUserId = '' }) {
   const { t } = useApp()
   const cur = currency || group?.currency || ''
   const list = expenses || []
+
+  // Privacy: an admin sees group numbers; a member sees ONLY their own
+  // numbers — their own share of each visible expense (never another
+  // member's amounts, and never the group-wide budget).
+  const ownShare = (e) => {
+    if (!currentUserId) return Number(e.amount) || 0
+    const mine = (e.splitBetween || []).find((x) => idOf(x.user) === currentUserId)
+    if (mine) return Number(mine.shareAmount) || 0
+    if (idOf(e.paidBy) === currentUserId) return Number(e.amount) || 0
+    return 0
+  }
+  const amountOf = (e) => (isAdmin ? Number(e.amount) || 0 : ownShare(e))
 
   const totalsByCategory = useMemo(() => {
     const totals = {}
     list.forEach((e) => {
       const c = e.category || 'other'
-      totals[c] = (totals[c] || 0) + (Number(e.amount) || 0)
+      totals[c] = (totals[c] || 0) + amountOf(e)
     })
     return totals
-  }, [list])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [list, isAdmin, currentUserId])
 
-  const totalSpent = useMemo(() => list.reduce((s, e) => s + (Number(e.amount) || 0), 0), [list])
+  const totalSpent = useMemo(() => list.reduce((s, e) => s + amountOf(e), 0), [list, isAdmin, currentUserId])
   const maxCat = Math.max(0, ...Object.values(totalsByCategory))
 
   const leaderboard = useMemo(() => {
+    if (!isAdmin) {
+      // Members see only their own row — never other members' totals.
+      if (!currentUserId) return []
+      const me = (members || []).find((m) => idOf(m.user || m) === currentUserId)
+      return [{ id: currentUserId, name: me ? nameOf(me.user || me) : currentUserId, total: totalSpent }]
+    }
     const paid = {}
     list.forEach((e) => {
       const id = idOf(e.paidBy)
@@ -69,7 +88,7 @@ export default function AnalyticsSection({ expenses = [], members = [], group = 
       })
       .sort((a, b) => b.total - a.total)
     return rows
-  }, [list, members])
+  }, [list, members, isAdmin, currentUserId, totalSpent, t])
 
   const maxPaid = leaderboard.length ? leaderboard[0].total : 0
 
@@ -81,9 +100,9 @@ export default function AnalyticsSection({ expenses = [], members = [], group = 
           const d = new Date(e.date || e.createdAt)
           return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
         })
-        .reduce((s, e) => s + (Number(e.amount) || 0), 0),
+        .reduce((s, e) => s + amountOf(e), 0),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [list]
+    [list, isAdmin, currentUserId]
   )
 
   const budget = Number(group?.monthlyBudget) || 0
@@ -96,27 +115,34 @@ export default function AnalyticsSection({ expenses = [], members = [], group = 
         <h3 className="font-bold text-slate-900 dark:text-white">{t('analytics')}</h3>
       </div>
 
-      {/* Monthly budget progress */}
-      <div className="mb-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm mb-1.5">
-          <span className="font-medium text-slate-700 dark:text-slate-200 min-w-0 break-words">
-            {t('monthlyBudget')} — {t('spentThisMonth')}: {cur} {monthTotal.toFixed(2)}
-            {budget > 0 ? ` / ${cur} ${budget.toFixed(2)}` : ''}
-          </span>
-          <span
-            className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              level === 'over' ? 'bg-red-100 text-red-700 animate-pulse-red' : level === 'warning' ? 'bg-amber-100 text-amber-800' : level === 'none' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700'
-            }`}
-          >
-            {budget > 0 ? `${pct.toFixed(0)}% · ${level === 'over' ? t('budgetExceeded') : level === 'warning' ? t('budgetWarning') : t('budgetOnTrack')}` : t('noBudgetSet')}
-          </span>
-        </div>
-        {budget > 0 && (
-          <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden" role="progressbar" aria-valuenow={Math.round(Math.min(pct, 100))} aria-valuemin="0" aria-valuemax="100">
-            <div className={`h-full rounded-full transition-all ${budgetBarClass(level)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      {/* Monthly budget progress — admin only (group-wide). Members see
+          only their own spending this month, never the group budget. */}
+      {isAdmin ? (
+        <div className="mb-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-sm mb-1.5">
+            <span className="font-medium text-slate-700 dark:text-slate-200 min-w-0 break-words">
+              {t('monthlyBudget')} — {t('spentThisMonth')}: {cur} {monthTotal.toFixed(2)}
+              {budget > 0 ? ` / ${cur} ${budget.toFixed(2)}` : ''}
+            </span>
+            <span
+              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                level === 'over' ? 'bg-red-100 text-red-700 animate-pulse-red' : level === 'warning' ? 'bg-amber-100 text-amber-800' : level === 'none' ? 'bg-slate-100 text-slate-600' : 'bg-emerald-100 text-emerald-700'
+              }`}
+            >
+              {budget > 0 ? `${pct.toFixed(0)}% · ${level === 'over' ? t('budgetExceeded') : level === 'warning' ? t('budgetWarning') : t('budgetOnTrack')}` : t('noBudgetSet')}
+            </span>
           </div>
-        )}
-      </div>
+          {budget > 0 && (
+            <div className="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden" role="progressbar" aria-valuenow={Math.round(Math.min(pct, 100))} aria-valuemin="0" aria-valuemax="100">
+              <div className={`h-full rounded-full transition-all ${budgetBarClass(level)}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="mb-5 text-sm text-slate-600 dark:text-slate-300">
+          {t('spentThisMonth')}: {cur} {monthTotal.toFixed(2)}
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Category breakdown — horizontal bars (pure Tailwind, no chart lib) */}

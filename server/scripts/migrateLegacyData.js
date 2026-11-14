@@ -1,5 +1,5 @@
 /**
- * migrateLegacyData.js — safe, idempotent migration for legacy SplitTrack data.
+ * migrateLegacyData.js — safe, idempotent migration for legacy Kharcha Marcha data.
  *
  *   node scripts/migrateLegacyData.js            -> dry run: prints what it
  *                                                   WOULD do, writes nothing.
@@ -17,8 +17,8 @@
  *    (role ADMIN for the group creator, MEMBER otherwise; status ACCEPTED)
  *  - duplicate Memberships for the same (groupId, userId) -> keep earliest, delete rest
  *  - Groups missing inviteCode -> backfill a unique KH-XXXX code
- *  - missing defaults: Group.invitesEnabled / autoApproveJoin / isDemoGroup /
- *    currency / monthlyBudget, User.isSuperAdmin / isBlocked / isDemoUser /
+ *  - missing defaults: Group.invitesEnabled / autoApproveJoin /
+ *    currency / monthlyBudget, User.isSuperAdmin / isBlocked /
  *    avatarColor, Expense.status / type / editCount / canEditAgain /
  *    isDeleted / isHidden / splitMethod / notes / receiptUrl / editHistory,
  *    splitBetween entries missing shareMeta -> 0, Membership.role / status
@@ -212,13 +212,11 @@ async function runMigration(db, session) {
   const defaultSets = [
     ['groups', { invitesEnabled: { $exists: false } }, { invitesEnabled: true }],
     ['groups', { autoApproveJoin: { $exists: false } }, { autoApproveJoin: false }],
-    ['groups', { isDemoGroup: { $exists: false } }, { isDemoGroup: false }],
     ['groups', { color: { $exists: false } }, { color: '#4F46E5' }],
     ['groups', { currency: { $exists: false } }, { currency: 'PKR' }],
     ['groups', { monthlyBudget: { $exists: false } }, { monthlyBudget: 0 }],
     ['users', { isSuperAdmin: { $exists: false } }, { isSuperAdmin: false }],
     ['users', { isBlocked: { $exists: false } }, { isBlocked: false }],
-    ['users', { isDemoUser: { $exists: false } }, { isDemoUser: false }],
     ['users', { avatarColor: { $exists: false } }, { avatarColor: '#6366F1' }],
     ['expenses', { type: { $exists: false } }, { type: 'EXPENSE' }],
     ['expenses', { status: { $exists: false } }, { status: 'PENDING_SETTLEMENT' }],
@@ -291,7 +289,7 @@ async function runMigration(db, session) {
 
 async function main() {
   console.log(
-    `SplitTrack legacy migration — mode: ${confirm ? 'CONFIRM (will write)' : 'DRY RUN (no writes)'}`
+    `Kharcha Marcha legacy migration — mode: ${confirm ? 'CONFIRM (will write)' : 'DRY RUN (no writes)'}`
   );
 
   const mongoUri =

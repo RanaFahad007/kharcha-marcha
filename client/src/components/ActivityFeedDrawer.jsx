@@ -36,7 +36,12 @@ export default function ActivityFeedDrawer({ groupId, open, onClose }) {
       setError('')
       try {
         const res = await api.get(`/groups/${groupId}/activity`)
-        if (!cancelled) setLogs(res.data?.data || res.data || [])
+        // Backend returns { data: { activity: [...] } }; the server already
+        // filters to the caller's own entries for non-admins.
+        if (!cancelled) {
+          const d = res.data?.data || {}
+          setLogs(Array.isArray(d) ? d : d.activity || [])
+        }
       } catch (e) {
         if (!cancelled) setError(e?.response?.data?.message || t('failedToLoad'))
       } finally {
@@ -74,7 +79,8 @@ export default function ActivityFeedDrawer({ groupId, open, onClose }) {
           {!loading &&
             logs.map((log, i) => {
               const action = log.action || log.type || ''
-              const actor = nameOf(log.actor || log.user || log.createdBy)
+              // Backend populates the actor as actorId.
+              const actor = nameOf(log.actorId || log.actor || log.user || log.createdBy)
               const details = log.details || log.description || log.expense?.title || log.title || ''
               const time = log.createdAt ? new Date(log.createdAt).toLocaleString() : ''
               const history = log.expense?.editHistory || log.editHistory || []

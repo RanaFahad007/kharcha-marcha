@@ -12,7 +12,6 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     isSuperAdmin: { type: Boolean, default: false },
     isBlocked: { type: Boolean, default: false },
-    isDemoUser: { type: Boolean, default: false },
     avatarColor: { type: String, default: '#6366F1' },
     lastActiveGroupId: {
       type: mongoose.Schema.Types.ObjectId,

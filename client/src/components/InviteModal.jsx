@@ -13,7 +13,7 @@ export default function InviteModal({ group, onClose }) {
   if (!group) return null
   const inviteCode = group.inviteCode || ''
   const inviteLink = `${window.location.origin}/join/${inviteCode}`
-  const waText = `Join our expense group '${group.name}' on SplitTrack! Use code: ${inviteCode} or click: ${inviteLink}`
+  const waText = `Join our expense group '${group.name}' on Kharcha Marcha! Use code: ${inviteCode} or click: ${inviteLink}`
   const waHref = `https://wa.me/?text=${encodeURIComponent(waText)}`
 
   async function copyLink() {

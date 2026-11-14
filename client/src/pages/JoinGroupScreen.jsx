@@ -19,11 +19,12 @@ export default function JoinGroupScreen() {
     try {
       const res = await api.get(`/groups/join/${inviteCode}`)
       const data = res.data?.data || res.data
-      setPreview(data?.group || data)
-      const st = data?.status || data?.membershipStatus || data?.group?.status
-      if (data?.isMember || st === 'accepted') setStatus('accepted')
-      else if (st === 'pending') setStatus('pending')
-      else if (st === 'rejected') setStatus('rejected')
+      // getJoinInfo returns { group, invitesEnabled, autoApproveJoin, myStatus }.
+      setPreview({ ...(data?.group || data), invitesEnabled: data?.invitesEnabled, autoApproveJoin: data?.autoApproveJoin })
+      const st = (data?.myStatus || 'NONE').toUpperCase()
+      if (st === 'ACCEPTED') setStatus('accepted')
+      else if (st === 'PENDING') setStatus('pending')
+      else if (st === 'REJECTED') setStatus('rejected')
       else setStatus('ready')
     } catch (e) {
       setStatus('error')
@@ -62,8 +63,10 @@ export default function JoinGroupScreen() {
     try {
       const res = await api.post(`/groups/join/${inviteCode}`)
       const data = res.data?.data || res.data
-      const st = data?.status || data?.membershipStatus
-      if (st === 'accepted' || data?.isMember || data?.group) {
+      // joinByInvite returns { membership, group }; the membership status
+      // decides: ACCEPTED -> open the group, PENDING -> wait for the admin.
+      const membershipStatus = (data?.membership?.status || 'PENDING').toUpperCase()
+      if (membershipStatus === 'ACCEPTED') {
         pushToast('success', t('groupJoined'))
         const list = await fetchMyGroups()
         const found = list.find((g) => g.inviteCode === inviteCode) || data?.group

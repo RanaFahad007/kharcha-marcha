@@ -82,7 +82,7 @@ app.use(
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.json({ success: true, message: 'SplitTrack API is running', data: { status: 'ok' } });
+  res.json({ success: true, message: 'Kharcha Marcha API is running', data: { status: 'ok' } });
 });
 app.get('/health', (req, res) => {
   res.json({ success: true, message: 'OK', data: { status: 'ok' } });
@@ -149,7 +149,7 @@ async function start() {
   }
   await seedSuperAdminIfNeeded();
   app.listen(PORT, () => {
-    console.log(`SplitTrack server listening on port ${PORT}`);
+    console.log(`Kharcha Marcha server listening on port ${PORT}`);
   });
 }
 

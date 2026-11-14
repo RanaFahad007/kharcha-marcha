@@ -70,7 +70,7 @@ export function downloadPDF(exportJson) {
   const settlements = exportJson?.settlements || exportJson?.balances?.settlements || []
 
   doc.setFontSize(18)
-  doc.text(`SplitTrack — ${group.name || 'Expense Report'}`, 14, 18)
+  doc.text(`Kharcha Marcha — ${group.name || 'Expense Report'}`, 14, 18)
   doc.setFontSize(10)
   doc.text(`Exported: ${new Date(exportJson?.exportedAt || Date.now()).toLocaleString()}`, 14, 26)
   if (summary.totalSpent !== undefined || summary.total !== undefined) {

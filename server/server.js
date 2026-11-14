@@ -9,6 +9,48 @@ const User = require('./models/User');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ---- Vercel serverless support ----
+// On Vercel the app runs as a serverless function: there is no long-lived
+// process, so the DB connection is established lazily (and cached across
+// warm invocations) on the first API request instead of at startup.
+// Local `node server.js` still connects eagerly in start() below.
+let dbConnectionPromise = null;
+let seedPromise = null;
+async function connectDb() {
+  if (mongoose.connection.readyState === 1) return;
+  if (!dbConnectionPromise) {
+    const mongoUri =
+      process.env.MONGODB_URI ||
+      process.env.MONGO_URI ||
+      'mongodb://localhost:27017/splittrack';
+    dbConnectionPromise = mongoose
+      .connect(mongoUri, { dbName: 'splittrack', serverSelectionTimeoutMS: 10000 })
+      .catch((err) => {
+        dbConnectionPromise = null;
+        throw err;
+      });
+  }
+  return dbConnectionPromise;
+}
+async function ensureDb(req, res, next) {
+  try {
+    await connectDb();
+    if (!seedPromise) {
+      seedPromise = seedSuperAdminIfNeeded().catch((err) => {
+        seedPromise = null;
+        throw err;
+      });
+    }
+    await seedPromise;
+    next();
+  } catch (err) {
+    console.error('Database unavailable:', err.message);
+    res
+      .status(503)
+      .json({ success: false, error: 'Database unavailable. Please try again shortly.' });
+  }
+}
+
 // CORS: allow the configured frontend origin(s) via env, plus local dev.
 // VITE_API_URL is the API base the client talks to; the frontend origin is
 // FRONTEND_URL (or VITE_FRONTEND_URL / CLIENT_URL). Comma-separated lists
@@ -46,7 +88,7 @@ app.get('/health', (req, res) => {
   res.json({ success: true, message: 'OK', data: { status: 'ok' } });
 });
 
-app.use('/api', apiRouter);
+app.use('/api', ensureDb, apiRouter);
 
 // 404 handler
 app.use((req, res) => {
@@ -98,9 +140,8 @@ async function seedSuperAdminIfNeeded() {
 }
 
 async function start() {
-  const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/splittrack';
   try {
-    await mongoose.connect(mongoUri, { dbName: 'splittrack', serverSelectionTimeoutMS: 10000 });
+    await connectDb();
     console.log('Connected to MongoDB');
   } catch (err) {
     console.error('Failed to connect to MongoDB:', err.message);

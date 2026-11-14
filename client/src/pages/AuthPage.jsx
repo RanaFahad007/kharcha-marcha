@@ -43,10 +43,9 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-navy-950 flex items-center justify-center px-4 py-6 sm:py-10">
       <div className="w-full max-w-md">
+        <img src="/banner.jpg" alt="Kharcha Marcha — Split kharcha, no jhanjhat" className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 shadow-card mb-4" />
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto mb-3">
-            <Wallet className="w-7 h-7" />
-          </div>
+          <img src="/icon-192.png" alt="Kharcha Marcha icon" className="w-14 h-14 rounded-2xl mx-auto mb-3 shadow-card" />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('appName')}</h1>
           <p className="text-slate-500 text-sm mt-1">{t('tagline')}</p>
         </div>

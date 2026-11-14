@@ -257,6 +257,7 @@ export default function ExpenseModal({ group, members, expense, onClose, onSaved
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-1">{t('date')}</label>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500" />
+              <p className="text-xs text-slate-400 mt-1">{t('expenseDateHint')}</p>
             </div>
           </div>
 

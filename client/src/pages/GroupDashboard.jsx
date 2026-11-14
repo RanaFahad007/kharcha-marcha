@@ -366,8 +366,30 @@ export default function GroupDashboard() {
                   </option>
                 ))}
               </select>
-              <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm max-w-full" />
-              <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm max-w-full" />
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('fromDate')}</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  aria-label={t('fromDate')}
+                  title={t('fromDateHint')}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm max-w-full focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-0.5">{t('fromDateHint')}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{t('toDate')}</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  aria-label={t('toDate')}
+                  title={t('toDateHint')}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-800 dark:text-white text-sm max-w-full focus:outline-none focus:ring-2 focus:ring-brand-500"
+                />
+                <p className="text-[11px] text-slate-400 mt-0.5">{t('toDateHint')}</p>
+              </div>
               <button onClick={clearFilters} className="px-3 py-2 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-600 dark:text-slate-100 text-sm hover:bg-slate-50 dark:hover:bg-slate-800">
                 {t('clearFilters')}
               </button>

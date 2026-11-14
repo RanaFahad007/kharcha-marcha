@@ -8,12 +8,31 @@ function nameOf(v) {
   return v.name || v.email || v._id || ''
 }
 
+function formatWhen(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleString()
+}
+
+const TABS = [
+  { id: 'overview', labelKey: 'overview' },
+  { id: 'expenses', labelKey: 'allExpenses' },
+  { id: 'activity', labelKey: 'allActivity' },
+  { id: 'requests', labelKey: 'allRequests' },
+]
+
 export default function SuperAdminModal({ open, onClose }) {
   const { user, t, pushToast } = useApp()
+  const [tab, setTab] = useState('overview')
   const [stats, setStats] = useState(null)
   const [groups, setGroups] = useState([])
   const [users, setUsers] = useState([])
+  const [expenses, setExpenses] = useState([])
+  const [activity, setActivity] = useState([])
+  const [joinRequests, setJoinRequests] = useState([])
+  const [editRequests, setEditRequests] = useState([])
   const [loading, setLoading] = useState(false)
+  const [tabLoading, setTabLoading] = useState(false)
   const [busyId, setBusyId] = useState(null)
 
   const load = useCallback(async () => {
@@ -36,9 +55,38 @@ export default function SuperAdminModal({ open, onClose }) {
     }
   }, [pushToast, t])
 
+  const loadTab = useCallback(
+    async (tabId) => {
+      setTabLoading(true)
+      try {
+        if (tabId === 'expenses') {
+          const res = await api.get('/admin/expenses')
+          const d = res.data?.data || {}
+          setExpenses(Array.isArray(d) ? d : d.expenses || [])
+        } else if (tabId === 'activity') {
+          const res = await api.get('/admin/activity')
+          const d = res.data?.data || {}
+          setActivity(Array.isArray(d) ? d : d.activity || [])
+        } else if (tabId === 'requests') {
+          const res = await api.get('/admin/requests')
+          const d = res.data?.data || {}
+          setJoinRequests(d.joinRequests || [])
+          setEditRequests(d.editRequests || [])
+        }
+      } catch (e) {
+        pushToast('error', e?.response?.data?.message || t('failedToLoad'))
+      } finally {
+        setTabLoading(false)
+      }
+    },
+    [pushToast, t]
+  )
+
   useEffect(() => {
-    if (open) load()
-  }, [open, load])
+    if (!open) return
+    if (tab === 'overview') load()
+    else loadTab(tab)
+  }, [open, tab, load, loadTab])
 
   async function toggleBlock(targetUser, isBlocked) {
     const uid = targetUser?._id || targetUser
@@ -100,12 +148,36 @@ export default function SuperAdminModal({ open, onClose }) {
           </button>
         </div>
 
-        {loading ? (
+        <div className="flex gap-2 overflow-x-auto pb-1 mb-4" role="tablist">
+          {TABS.map((tb) => (
+            <button
+              key={tb.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === tb.id}
+              onClick={() => setTab(tb.id)}
+              className={`px-3 py-2 min-h-[44px] rounded-lg text-sm font-medium whitespace-nowrap border shrink-0 ${
+                tab === tb.id
+                  ? 'bg-brand-600 text-white border-brand-600'
+                  : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+              }`}
+            >
+              {t(tb.labelKey)}
+              {tb.id === 'requests' && joinRequests.length + editRequests.length > 0 && (
+                <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-red-500 text-white font-bold">
+                  {joinRequests.length + editRequests.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {loading && tab === 'overview' ? (
           <div className="flex items-center justify-center gap-2 py-10 text-slate-500">
             <Loader2 className="w-5 h-5 spinner" />
             {t('loading')}
           </div>
-        ) : (
+        ) : tab === 'overview' ? (
           <>
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-6">
               {statCards.map((c) => (
@@ -206,6 +278,108 @@ export default function SuperAdminModal({ open, onClose }) {
               })}
             </div>
           </>
+        ) : tab === 'expenses' ? (
+          <div className="space-y-2 max-h-[60dvh] overflow-y-auto pr-1 min-w-0">
+            {tabLoading && (
+              <div className="flex items-center justify-center gap-2 py-10 text-slate-500">
+                <Loader2 className="w-5 h-5 spinner" />
+                {t('loading')}
+              </div>
+            )}
+            {!tabLoading && expenses.length === 0 && <p className="text-sm text-slate-500 text-center py-4">{t('noExpenses')}</p>}
+            {expenses.map((e) => (
+              <div key={e._id} className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 sm:px-4 py-3 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-slate-900 dark:text-white truncate min-w-0">{e.title}</span>
+                  <span className="font-bold text-slate-900 dark:text-white shrink-0">{Number(e.amount || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-xs text-slate-500">
+                  <span>{t('groupName')}: {e.group?.name || '—'}</span>
+                  <span>{t('category')}: {e.category}</span>
+                  <span>{t('paidBy')}: {e.paidBy?.name || '—'}</span>
+                  <span>{t('createdBy')}: {e.createdBy?.name || '—'}</span>
+                  <span>{t('date')}: {formatWhen(e.date)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : tab === 'activity' ? (
+          <div className="space-y-2 max-h-[60dvh] overflow-y-auto pr-1 min-w-0">
+            {tabLoading && (
+              <div className="flex items-center justify-center gap-2 py-10 text-slate-500">
+                <Loader2 className="w-5 h-5 spinner" />
+                {t('loading')}
+              </div>
+            )}
+            {!tabLoading && activity.length === 0 && <p className="text-sm text-slate-500 text-center py-4">{t('noActivity')}</p>}
+            {activity.map((a) => (
+              <div key={a._id} className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 sm:px-4 py-3 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-slate-900 dark:text-white truncate min-w-0">
+                    {a.actor?.name || '—'} — {a.action}
+                  </span>
+                  <span className="text-xs text-slate-400 shrink-0">{formatWhen(a.createdAt)}</span>
+                </div>
+                {a.details && <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 break-words">{a.details}</p>}
+                <p className="text-xs text-slate-500 mt-1">
+                  {t('groupName')}: {a.group?.name || '—'}
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-6 max-h-[60dvh] overflow-y-auto pr-1 min-w-0">
+            {tabLoading && (
+              <div className="flex items-center justify-center gap-2 py-10 text-slate-500">
+                <Loader2 className="w-5 h-5 spinner" />
+                {t('loading')}
+              </div>
+            )}
+            {!tabLoading && (
+              <>
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white mb-2">{t('joinRequests')}</h4>
+                  {joinRequests.length === 0 && <p className="text-sm text-slate-500">{t('noJoinRequests')}</p>}
+                  <div className="space-y-2">
+                    {joinRequests.map((r) => (
+                      <div key={r._id} className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 sm:px-4 py-3 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-slate-900 dark:text-white truncate min-w-0">{r.user?.name || '—'}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold shrink-0">{t('pending')}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-xs text-slate-500">
+                          <span>{t('groupName')}: {r.group?.name || '—'}</span>
+                          <span>{r.user?.emailOrPhone || ''}</span>
+                          <span>{formatWhen(r.requestedAt)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 dark:text-white mb-2">{t('editRequests')}</h4>
+                  {editRequests.length === 0 && <p className="text-sm text-slate-500">{t('noEditRequests')}</p>}
+                  <div className="space-y-2">
+                    {editRequests.map((r) => (
+                      <div key={r._id} className="border border-slate-200 dark:border-slate-700 rounded-xl px-3 sm:px-4 py-3 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-slate-900 dark:text-white truncate min-w-0">{r.expenseTitle}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold shrink-0">{t('pending')}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 text-xs text-slate-500">
+                          <span>{t('groupName')}: {r.group?.name || '—'}</span>
+                          <span>{t('requestedBy')}: {r.requester?.name || '—'}</span>
+                          <span>{t('amount')}: {Number(r.expenseAmount || 0).toFixed(2)}</span>
+                          <span>{formatWhen(r.requestedAt)}</span>
+                        </div>
+                        {r.reason && <p className="text-sm text-slate-600 dark:text-slate-300 mt-1.5 break-words">{t('reason')}: {r.reason}</p>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </div>
     </div>

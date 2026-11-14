@@ -2,6 +2,7 @@ const User = require('../models/User');
 const Group = require('../models/Group');
 const Expense = require('../models/Expense');
 const Membership = require('../models/Membership');
+const ActivityLog = require('../models/ActivityLog');
 
 async function getStats(req, res, next) {
   try {
@@ -181,4 +182,112 @@ async function unblockUser(req, res, next) {
   return setBlocked(req, res, next, false);
 }
 
-module.exports = { getStats, listAllGroups, listUsers, deleteUser, deleteGroup, blockUser, unblockUser };
+// ---- SuperAdmin full visibility: every expense, activity entry and
+// ---- pending request across ALL groups. Access is gated only by
+// ---- requireSuperAdmin (one login) — no per-item approval is needed.
+// ---- All three return the latest 100 records, newest first.
+async function listAllExpenses(req, res, next) {
+  try {
+    const expenses = await Expense.find({ isDeleted: false })
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .populate('groupId', 'name')
+      .populate('paidBy', 'name')
+      .populate('createdBy', 'name')
+      .lean();
+    const mapped = expenses.map((e) => ({
+      _id: e._id,
+      title: e.title,
+      amount: e.amount,
+      category: e.category,
+      type: e.type,
+      date: e.date,
+      createdAt: e.createdAt,
+      group: e.groupId ? { _id: e.groupId._id, name: e.groupId.name } : null,
+      paidBy: e.paidBy ? { _id: e.paidBy._id, name: e.paidBy.name } : null,
+      createdBy: e.createdBy ? { _id: e.createdBy._id, name: e.createdBy.name } : null,
+    }));
+    return res.json({ success: true, data: { expenses: mapped } });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function listAllActivity(req, res, next) {
+  try {
+    const logs = await ActivityLog.find({})
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .populate('groupId', 'name')
+      .populate('actorId', 'name')
+      .lean();
+    const mapped = logs.map((l) => ({
+      _id: l._id,
+      action: l.action,
+      details: l.details,
+      createdAt: l.createdAt,
+      group: l.groupId ? { _id: l.groupId._id, name: l.groupId.name } : null,
+      actor: l.actorId ? { _id: l.actorId._id, name: l.actorId.name } : null,
+    }));
+    return res.json({ success: true, data: { activity: mapped } });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function listAllRequests(req, res, next) {
+  try {
+    const [joinDocs, editDocs] = await Promise.all([
+      Membership.find({ status: 'PENDING' })
+        .sort({ createdAt: -1 })
+        .populate('userId', 'name emailOrPhone')
+        .populate('groupId', 'name')
+        .lean(),
+      Expense.find({ isDeleted: false, 'editRequest.status': 'PENDING' })
+        .sort({ 'editRequest.requestedAt': -1 })
+        .populate('groupId', 'name')
+        .populate('createdBy', 'name emailOrPhone')
+        .lean(),
+    ]);
+    // Only the expense creator can request an edit, so the requester is
+    // always the expense's createdBy.
+    const joinRequests = joinDocs.map((m) => ({
+      _id: m._id,
+      type: 'JOIN',
+      user: m.userId
+        ? { _id: m.userId._id, name: m.userId.name, emailOrPhone: m.userId.emailOrPhone }
+        : null,
+      group: m.groupId ? { _id: m.groupId._id, name: m.groupId.name } : null,
+      requestedAt: m.createdAt,
+    }));
+    const editRequests = editDocs.map((e) => ({
+      _id: e._id,
+      type: 'EDIT',
+      expenseId: e._id,
+      expenseTitle: e.title,
+      expenseAmount: e.amount,
+      group: e.groupId ? { _id: e.groupId._id, name: e.groupId.name } : null,
+      requester: e.createdBy
+        ? { _id: e.createdBy._id, name: e.createdBy.name, emailOrPhone: e.createdBy.emailOrPhone }
+        : null,
+      reason: e.editRequest?.reason || '',
+      requestedAt: e.editRequest?.requestedAt || e.updatedAt,
+    }));
+    return res.json({ success: true, data: { joinRequests, editRequests } });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = {
+  getStats,
+  listAllGroups,
+  listUsers,
+  deleteUser,
+  deleteGroup,
+  blockUser,
+  unblockUser,
+  listAllExpenses,
+  listAllActivity,
+  listAllRequests,
+};

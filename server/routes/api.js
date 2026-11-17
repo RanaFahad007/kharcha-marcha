@@ -11,6 +11,7 @@ const groupController = require('../controllers/groupController');
 const expenseController = require('../controllers/expenseController');
 const adminController = require('../controllers/adminController');
 const activityController = require('../controllers/activityController');
+const pocketMoneyController = require('../controllers/pocketMoneyController');
 
 // ---- Super admin ----
 router.get('/admin/stats', authenticateJWT, requireSuperAdmin, adminController.getStats);
@@ -23,6 +24,14 @@ router.delete('/admin/groups/:groupId', authenticateJWT, requireSuperAdmin, admi
 router.post('/admin/users/:userId/block', authenticateJWT, requireSuperAdmin, adminController.blockUser);
 router.post('/admin/users/:userId/unblock', authenticateJWT, requireSuperAdmin, adminController.unblockUser);
 router.delete('/admin/users/:userId', authenticateJWT, requireSuperAdmin, adminController.deleteUser);
+
+// ---- Pocket Money (personal month management — own data only) ----
+router.get('/pocket-money/:month', authenticateJWT, pocketMoneyController.getSummary);
+router.put('/pocket-money/:month', authenticateJWT, pocketMoneyController.setBudget);
+router.get('/pocket-money/:month/expenses', authenticateJWT, pocketMoneyController.listPersonalExpenses);
+router.post('/pocket-money/:month/expenses', authenticateJWT, pocketMoneyController.addPersonalExpense);
+router.delete('/pocket-money/:month/expenses/:id', authenticateJWT, pocketMoneyController.deletePersonalExpense);
+router.get('/pocket-money/:month/breakdown', authenticateJWT, pocketMoneyController.getBreakdown);
 
 // ---- Auth ----
 router.post('/auth/signup', authController.signup);

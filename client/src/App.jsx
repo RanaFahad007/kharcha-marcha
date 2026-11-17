@@ -1,6 +1,6 @@
 import { Component } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { AlertCircle, CheckCircle2, LayoutDashboard, Plus, RefreshCw, UserPlus, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, LayoutDashboard, Plus, RefreshCw, UserPlus, Wallet, X } from 'lucide-react'
 import { useApp } from './context/AppContext'
 import Navbar from './components/Navbar'
 import OnboardingCards from './components/OnboardingCards'
@@ -8,6 +8,7 @@ import AuthPage from './pages/AuthPage'
 import JoinGroupScreen from './pages/JoinGroupScreen'
 import GroupDashboard from './pages/GroupDashboard'
 import AdminPanel from './pages/AdminPanel'
+import PocketMoney from './pages/PocketMoney'
 
 /**
  * Error boundary: a render crash (e.g. an unexpected API shape) used to
@@ -154,6 +155,10 @@ function MobileBottomNav() {
           <UserPlus className="w-5 h-5" />
           <span className="truncate max-w-full px-1">{t('invite')}</span>
         </button>
+        <button onClick={() => navigate('/pocket-money')} className={itemClass(location.pathname === '/pocket-money')} aria-current={location.pathname === '/pocket-money' ? 'page' : undefined}>
+          <Wallet className="w-5 h-5" />
+          <span className="truncate max-w-full px-1">{t('pocketMoney')}</span>
+        </button>
       </div>
     </nav>
   )
@@ -201,6 +206,16 @@ export default function App() {
             <Protected>
               <AuthedLayout>
                 <GroupDashboard />
+              </AuthedLayout>
+            </Protected>
+          }
+        />
+        <Route
+          path="/pocket-money"
+          element={
+            <Protected>
+              <AuthedLayout>
+                <PocketMoney />
               </AuthedLayout>
             </Protected>
           }
